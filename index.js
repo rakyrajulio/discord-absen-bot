@@ -1,13 +1,16 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const {
+  Client,
+  GatewayIntentBits,
+  REST,
+  Routes,
+  SlashCommandBuilder
+} = require('discord.js');
 const fs = require('fs');
 require('dotenv').config();
 
+
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
+  intents: [GatewayIntentBits.Guilds]
 });
 
 const DB_FILE = './database.json';
@@ -35,97 +38,111 @@ const ACHIEVEMENTS = [
   { name: 'TOP', point: 1000 }
 ];
 
+const commands = [
+  new SlashCommandBuilder()
+    .setName('help')
+    .setDescription('Menampilkan daftar command'),
+
+  new SlashCommandBuilder()
+    .setName('absen')
+    .setDescription('Absen harian (+5 point)'),
+
+  new SlashCommandBuilder()
+    .setName('point')
+    .setDescription('Cek point kamu'),
+
+  new SlashCommandBuilder()
+    .setName('profile')
+    .setDescription('Lihat profil lengkap'),
+
+  new SlashCommandBuilder()
+    .setName('buy')
+    .setDescription('Beli / upgrade role')
+    .addStringOption(opt =>
+      opt.setName('role')
+        .setDescription('Pilih role')
+        .setRequired(true)
+        .addChoices(
+          { name: 'VIP', value: 'vip' },
+          { name: 'ELITE', value: 'elite' },
+          { name: 'LEGEND', value: 'legend' },
+          { name: 'MYTHIC', value: 'mythic' }
+        )
+    )
+].map(cmd => cmd.toJSON());
+
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+
+(async () => {
+  try {
+    console.log('🔁 Register slash command...');
+    await rest.put(
+      Routes.applicationCommands(process.env.CLIENT_ID),
+      { body: commands }
+    );
+    console.log('✅ Slash command terdaftar');
+  } catch (err) {
+    console.error(err);
+  }
+})();
+
 client.once('ready', () => {
-  console.log('🤖 Bot ONLINE!');
+  console.log('🤖 Bot ONLINE (Slash Command)');
 });
 
-client.on('messageCreate', async msg => {
-  if (msg.author.bot) return;
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
 
-  const userId = msg.author.id;
+  const userId = interaction.user.id;
   const today = new Date().toISOString().slice(0, 10);
-  const cmd = msg.content.toLowerCase();
 
   if (!db[userId]) {
-    db[userId] = {
-      point: 0,
-      lastAbsen: null
-    };
+    db[userId] = { point: 0, lastAbsen: null };
     saveDB();
   }
 
-  if (cmd === '!help') {
-    return sendHelp(msg);
+  if (interaction.commandName === 'help') {
+    return interaction.reply(
+`📖 **DAFTAR COMMAND**
+
+🗓 /absen → Absen harian (+5)
+💰 /point → Cek point
+👤 /profile → Profil lengkap
+🛒 /buy → Beli / upgrade role
+
+🏆 **Achievement Otomatis**
+ACTIVE MEMBER → 50+
+CONSISTENT → 200+
+VETERAN → 500+
+TOP → 1000+`
+    );
   }
 
-  if (cmd === '!absen') {
+  
+  if (interaction.commandName === 'absen') {
     if (db[userId].lastAbsen === today)
-      return msg.reply('❌ Kamu sudah absen hari ini.');
+      return interaction.reply({
+        content: '❌ Kamu sudah absen hari ini.',
+        ephemeral: true
+      });
 
     db[userId].lastAbsen = today;
     db[userId].point += 5;
     saveDB();
 
-    await checkAchievements(msg.member);
+    await checkAchievements(interaction.member);
 
-    return msg.reply('✅ Absen sukses! +5 point');
+    return interaction.reply('✅ Absen sukses! +5 point');
   }
 
-  if (cmd === '!point') {
-    return msg.reply(`💰 Point kamu: **${db[userId].point}**`);
+  
+  if (interaction.commandName === 'point') {
+    return interaction.reply(`💰 Point kamu: **${db[userId].point}**`);
   }
 
-  if (cmd.startsWith('!buy')) {
-    const args = cmd.split(' ');
-    const choice = args[1];
-
-    if (!choice || !SHOP[choice]) {
-      return msg.reply(
-        '❌ Pilih role:\n`vip` | `elite` | `legend` | `mythic`'
-      );
-    }
-
-    const item = SHOP[choice];
-    const member = msg.member;
-
-    const ownedRoles = Object.values(SHOP)
-      .filter(r => member.roles.cache.some(role => role.name === r.role));
-
-    let ownedPrice = 0;
-    if (ownedRoles.length > 0) {
-      ownedPrice = Math.max(...ownedRoles.map(r => r.price));
-    }
-
-    const priceToPay = item.price - ownedPrice;
-
-    if (priceToPay <= 0)
-      return msg.reply('⚠️ Kamu sudah punya role setara atau lebih tinggi.');
-
-    if (db[userId].point < priceToPay)
-      return msg.reply(`❌ Point kurang. Butuh **${priceToPay}** point.`);
-
-    const newRole = msg.guild.roles.cache.find(r => r.name === item.role);
-    if (!newRole) return msg.reply('❌ Role tidak ditemukan.');
-
-    for (const r of ownedRoles) {
-      const oldRole = msg.guild.roles.cache.find(role => role.name === r.role);
-      if (oldRole) await member.roles.remove(oldRole);
-    }
-
-    db[userId].point -= priceToPay;
-    await member.roles.add(newRole);
-    saveDB();
-
-    await checkAchievements(member);
-
-    return msg.reply(
-      `🎉 Berhasil upgrade ke **${item.role}**!\n💸 Dipotong ${priceToPay} point`
-    );
-  }
-
-  if (cmd === '!profile') {
-    const member = msg.member;
-    const userData = db[userId];
+  
+  if (interaction.commandName === 'profile') {
+    const member = interaction.member;
 
     const shopRoles = Object.values(SHOP)
       .filter(r => member.roles.cache.some(role => role.name === r.role))
@@ -137,41 +154,65 @@ client.on('messageCreate', async msg => {
       .map(a => a.name)
       .join(', ') || 'Belum ada';
 
-    return msg.reply(
-`👤 **Profil ${msg.author.username}**
-💰 Point: **${userData.point}**
+    return interaction.reply(
+`👤 **Profil ${interaction.user.username}**
+💰 Point: **${db[userId].point}**
 🎖 Shop Role: **${shopRoles}**
 🏆 Achievement: **${achievementRoles}**`
     );
   }
+
+
+  if (interaction.commandName === 'buy') {
+    const choice = interaction.options.getString('role');
+    const item = SHOP[choice];
+    const member = interaction.member;
+
+    const ownedRoles = Object.values(SHOP)
+      .filter(r => member.roles.cache.some(role => role.name === r.role));
+
+    let ownedPrice = 0;
+    if (ownedRoles.length > 0)
+      ownedPrice = Math.max(...ownedRoles.map(r => r.price));
+
+    const priceToPay = item.price - ownedPrice;
+
+    if (priceToPay <= 0)
+      return interaction.reply({
+        content: '⚠️ Kamu sudah punya role setara atau lebih tinggi.',
+        ephemeral: true
+      });
+
+    if (db[userId].point < priceToPay)
+      return interaction.reply({
+        content: `❌ Point kurang. Butuh ${priceToPay} point.`,
+        ephemeral: true
+      });
+
+    const newRole = interaction.guild.roles.cache.find(
+      r => r.name === item.role
+    );
+    if (!newRole)
+      return interaction.reply('❌ Role tidak ditemukan.');
+
+    for (const r of ownedRoles) {
+      const oldRole = interaction.guild.roles.cache.find(
+        role => role.name === r.role
+      );
+      if (oldRole) await member.roles.remove(oldRole);
+    }
+
+    db[userId].point -= priceToPay;
+    await member.roles.add(newRole);
+    saveDB();
+
+    await checkAchievements(member);
+
+    return interaction.reply(
+      `🎉 Berhasil upgrade ke **${item.role}**!\n💸 Dipotong ${priceToPay} point`
+    );
+  }
 });
-
-const sendHelp = (msg) => {
-  msg.reply(
-`📖 **DAFTAR COMMAND BOT**
-
-🗓 **Daily**
-• \`!absen\` → Absen harian (+5 point)
-• \`!point\` → Cek point
-
-🛒 **Shop Role**
-• \`!buy vip\` → 100
-• \`!buy elite\` → 300
-• \`!buy legend\` → 700
-• \`!buy mythic\` → 1500
-(Upgrade otomatis, bayar selisih)
-
-👤 **Profile**
-• \`!profile\` → Profil lengkap
-• \`!help\` → Bantuan
-
-🏆 **Achievement (Auto)**
-• ACTIVE MEMBER → 50+
-• CONSISTENT → 200+
-• VETERAN → 500+
-• TOP → 1000+`
-  );
-};
 
 const checkAchievements = async member => {
   const userData = db[member.id];
