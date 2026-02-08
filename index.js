@@ -67,8 +67,8 @@ client.on('messageCreate', async msg => {
   const args = msg.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  if (command === 'help') {
-    return msg.reply(
+ if (command === 'help') {
+  return msg.reply(
 `📖 **COMMAND BOT**
 
 🗓 >>absen → Absen random + streak
@@ -77,9 +77,9 @@ client.on('messageCreate', async msg => {
 🪙 >>koin → Cek koin
 👤 >>profile → Profile RPG
 🛒 >>buy vip|elite|legend|mythic
-
-    );
-  }
+`
+  );
+}
 
   if (command === 'absen') {
     if (db[userId].lastAbsen === today)
@@ -234,4 +234,5 @@ async function checkAchievements(member) {
 }
 
 client.login(process.env.TOKEN);
+
 
