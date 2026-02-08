@@ -2,8 +2,8 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 require('dotenv').config();
 
-
 const PREFIX = '>>';
+const WORK_COOLDOWN = 60 * 60 * 1000; // 1 jam
 
 const client = new Client({
   intents: [
@@ -13,6 +13,7 @@ const client = new Client({
   ]
 });
 
+// ================= DATABASE =================
 const DB_FILE = './database.json';
 let db = {};
 
@@ -20,10 +21,14 @@ if (fs.existsSync(DB_FILE)) {
   db = JSON.parse(fs.readFileSync(DB_FILE));
 }
 
-const saveDB = () => {
+const saveDB = () =>
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-};
 
+// ================= UTIL =================
+const koin = (n) => `${n.toLocaleString('id-ID')} 🪙`;
+const todayStr = () => new Date().toISOString().slice(0, 10);
+
+// ================= SHOP =================
 const SHOP = {
   vip: { role: 'VIP', price: 100 },
   elite: { role: 'ELITE', price: 300 },
@@ -31,6 +36,7 @@ const SHOP = {
   mythic: { role: 'MYTHIC', price: 1500 }
 };
 
+// ================= ACHIEVEMENT =================
 const ACHIEVEMENTS = [
   { name: 'ACTIVE MEMBER', point: 50 },
   { name: 'CONSISTENT', point: 200 },
@@ -39,128 +45,170 @@ const ACHIEVEMENTS = [
 ];
 
 client.once('ready', () => {
-  console.log('🤖 Bot ONLINE (Prefix >>)');
+  console.log('🤖 Bot ONLINE (>> ekonomi)');
 });
 
-
+// ================= MESSAGE =================
 client.on('messageCreate', async msg => {
   if (msg.author.bot) return;
   if (!msg.content.startsWith(PREFIX)) return;
 
   const userId = msg.author.id;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
 
   if (!db[userId]) {
-    db[userId] = { point: 0, lastAbsen: null };
+    db[userId] = {
+      point: 0,
+      lastAbsen: null,
+      streak: 0,
+      lastWork: 0
+    };
     saveDB();
   }
 
   const args = msg.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  
+  // ================= HELP =================
   if (command === 'help') {
     return msg.reply(
-`📖 **DAFTAR COMMAND**
+`📖 **COMMAND BOT**
 
-🗓 \`${PREFIX}absen\` → Absen harian (+5)
-💰 \`${PREFIX}point\` → Cek point
-👤 \`${PREFIX}profile\` → Profil lengkap
-🛒 \`${PREFIX}buy vip|elite|legend|mythic\`
+🗓 >>absen → Absen harian (random + streak)
+🛠 >>kerja → Kerja cari koin (1 jam cooldown)
+🏆 >>top → Leaderboard koin
+🪙 >>koin → Cek koin
+👤 >>profile → Profil
+🛒 >>buy vip|elite|legend|mythic
 
-🏆 **Achievement Otomatis**
-ACTIVE MEMBER → 50+
-CONSISTENT → 200+
-VETERAN → 500+
-TOP → 1000+`
+🪙 Koin hanya virtual server`
     );
   }
 
+  // ================= ABSEN + STREAK =================
   if (command === 'absen') {
     if (db[userId].lastAbsen === today)
       return msg.reply('❌ Kamu sudah absen hari ini.');
 
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.toISOString().slice(0, 10);
+
+    if (db[userId].lastAbsen === yStr) {
+      db[userId].streak += 1;
+    } else {
+      db[userId].streak = 1;
+    }
+
+    const rewards = [3, 5, 7, 10, 15];
+    let reward = rewards[Math.floor(Math.random() * rewards.length)];
+
+    let bonus = 0;
+    if (db[userId].streak === 7) bonus = 20;
+    if (db[userId].streak === 14) bonus = 50;
+    if (db[userId].streak === 30) bonus = 200;
+
     db[userId].lastAbsen = today;
-    db[userId].point += 5;
+    db[userId].point += reward + bonus;
     saveDB();
 
     await checkAchievements(msg.member);
 
-    return msg.reply('✅ Absen sukses! +5 point');
-  }
-
-
-  if (command === 'point') {
-    return msg.reply(`💰 Point kamu: **${db[userId].point}**`);
-  }
-
-  if (command === 'profile') {
-    const member = msg.member;
-
-    const shopRoles = Object.values(SHOP)
-      .filter(r => member.roles.cache.some(role => role.name === r.role))
-      .map(r => r.role)
-      .join(', ') || 'Tidak ada';
-
-    const achievementRoles = ACHIEVEMENTS
-      .filter(a => member.roles.cache.some(r => r.name === a.name))
-      .map(a => a.name)
-      .join(', ') || 'Belum ada';
-
     return msg.reply(
-`👤 **Profil ${msg.author.username}**
-💰 Point: **${db[userId].point}**
-🎖 Shop Role: **${shopRoles}**
-🏆 Achievement: **${achievementRoles}**`
+`✅ Absen sukses!
+🎲 +${koin(reward)}
+🔥 Streak: ${db[userId].streak} hari
+🎁 Bonus: ${koin(bonus)}`
     );
   }
 
-  
+  // ================= KERJA =================
+  if (command === 'kerja') {
+    const now = Date.now();
+    const diff = now - db[userId].lastWork;
+
+    if (diff < WORK_COOLDOWN) {
+      const mins = Math.ceil((WORK_COOLDOWN - diff) / 60000);
+      return msg.reply(`⏳ Kamu capek. Kerja lagi ${mins} menit lagi.`);
+    }
+
+    const jobs = [
+      'Programmer 💻',
+      'Barista ☕',
+      'Driver 🚗',
+      'Designer 🎨',
+      'Gamer 🎮'
+    ];
+
+    const job = jobs[Math.floor(Math.random() * jobs.length)];
+    const salary = Math.floor(Math.random() * 16) + 15; // 15–30
+
+    db[userId].lastWork = now;
+    db[userId].point += salary;
+    saveDB();
+
+    await checkAchievements(msg.member);
+
+    return msg.reply(
+`🛠 Kamu kerja sebagai **${job}**
+💰 Gaji: +${koin(salary)}
+⏳ Cooldown: 1 jam`
+    );
+  }
+
+  // ================= TOP =================
+  if (command === 'top') {
+    const topUsers = Object.entries(db)
+      .sort((a, b) => b[1].point - a[1].point)
+      .slice(0, 5);
+
+    let text = '🏆 **TOP 5 KOIN SERVER**\n\n';
+    for (let i = 0; i < topUsers.length; i++) {
+      const user = await client.users.fetch(topUsers[i][0]);
+      text += `${i + 1}. **${user.username}** — ${koin(topUsers[i][1].point)}\n`;
+    }
+
+    return msg.reply(text);
+  }
+
+  // ================= KOIN =================
+  if (command === 'koin') {
+    return msg.reply(`🪙 Koin kamu: **${koin(db[userId].point)}**`);
+  }
+
+  // ================= PROFILE =================
+  if (command === 'profile') {
+    return msg.reply(
+`👤 **${msg.author.username}**
+🪙 Koin: ${koin(db[userId].point)}
+🔥 Streak: ${db[userId].streak} hari`
+    );
+  }
+
+  // ================= BUY =================
   if (command === 'buy') {
     const choice = args[0];
-    if (!choice || !SHOP[choice]) {
-      return msg.reply('❌ Contoh: `>>buy vip`');
-    }
+    if (!choice || !SHOP[choice])
+      return msg.reply('❌ Contoh: >>buy vip');
 
     const item = SHOP[choice];
     const member = msg.member;
 
-    const ownedRoles = Object.values(SHOP)
-      .filter(r => member.roles.cache.some(role => role.name === r.role));
+    if (db[userId].point < item.price)
+      return msg.reply(`❌ Koin kurang. Butuh ${koin(item.price)}`);
 
-    let ownedPrice = 0;
-    if (ownedRoles.length > 0)
-      ownedPrice = Math.max(...ownedRoles.map(r => r.price));
+    const role = msg.guild.roles.cache.find(r => r.name === item.role);
+    if (!role) return msg.reply('❌ Role tidak ada.');
 
-    const priceToPay = item.price - ownedPrice;
-
-    if (priceToPay <= 0)
-      return msg.reply('⚠️ Kamu sudah punya role setara atau lebih tinggi.');
-
-    if (db[userId].point < priceToPay)
-      return msg.reply(`❌ Point kurang. Butuh ${priceToPay} point.`);
-
-    const newRole = msg.guild.roles.cache.find(r => r.name === item.role);
-    if (!newRole) return msg.reply('❌ Role tidak ditemukan.');
-
-    for (const r of ownedRoles) {
-      const oldRole = msg.guild.roles.cache.find(role => role.name === r.role);
-      if (oldRole) await member.roles.remove(oldRole);
-    }
-
-    db[userId].point -= priceToPay;
-    await member.roles.add(newRole);
+    db[userId].point -= item.price;
+    await member.roles.add(role);
     saveDB();
 
-    await checkAchievements(member);
-
-    return msg.reply(
-      `🎉 Berhasil upgrade ke **${item.role}**!\n💸 Dipotong ${priceToPay} point`
-    );
+    return msg.reply(`🎉 Berhasil beli **${item.role}**`);
   }
 });
 
-
+// ================= ACHIEVEMENT =================
 const checkAchievements = async member => {
   const userData = db[member.id];
   if (!userData) return;
@@ -170,13 +218,9 @@ const checkAchievements = async member => {
     if (!role) continue;
 
     if (userData.point >= ach.point && !member.roles.cache.has(role.id)) {
-      await member.roles.add(role);
-      member.send(
-        `🏆 Selamat! Kamu mendapatkan role **${ach.name}** (${ach.point}+ point)`
-      ).catch(() => {});
+      await member.roles.add(role).catch(() => {});
     }
   }
 };
-
 
 client.login(process.env.TOKEN);
