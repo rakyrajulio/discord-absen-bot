@@ -1,4 +1,9 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { 
+  Client, 
+  GatewayIntentBits, 
+  EmbedBuilder,
+  PermissionsBitField 
+} = require('discord.js');
 const fs = require('fs');
 require('dotenv').config();
 
@@ -23,7 +28,8 @@ if (fs.existsSync(DB_FILE)) {
 const saveDB = () =>
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-const koin = (n) => `${n.toLocaleString('id-ID')} 🪙`;
+
+const koin = n => `${n.toLocaleString('id-ID')} 🪙`;
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 const SHOP = {
@@ -41,7 +47,7 @@ const ACHIEVEMENTS = [
 ];
 
 client.once('ready', () => {
-  console.log('🤖 Bot ONLINE (>> ekonomi)');
+  console.log('🤖 Bot ONLINE (Economy + Profile Embed)');
 });
 
 client.on('messageCreate', async msg => {
@@ -68,14 +74,17 @@ client.on('messageCreate', async msg => {
     return msg.reply(
 `📖 **COMMAND BOT**
 
-🗓 >>absen → Absen harian (random + streak)
-🛠 >>kerja → Kerja cari koin (1 jam cooldown)
+🗓 >>absen → Absen (random + streak)
+🛠 >>kerja → Kerja (1 jam cooldown)
 🏆 >>top → Leaderboard koin
 🪙 >>koin → Cek koin
-👤 >>profile → Profil
+👤 >>profile → Profile keren
 🛒 >>buy vip|elite|legend|mythic
 
-🪙 Koin hanya virtual server`
+👑 ADMIN
+>>addkoin @user jumlah
+
+🪙 Koin bersifat virtual`
     );
   }
 
@@ -87,14 +96,11 @@ client.on('messageCreate', async msg => {
     yesterday.setDate(yesterday.getDate() - 1);
     const yStr = yesterday.toISOString().slice(0, 10);
 
-    if (db[userId].lastAbsen === yStr) {
-      db[userId].streak += 1;
-    } else {
-      db[userId].streak = 1;
-    }
+    db[userId].streak =
+      db[userId].lastAbsen === yStr ? db[userId].streak + 1 : 1;
 
     const rewards = [3, 5, 7, 10, 15];
-    let reward = rewards[Math.floor(Math.random() * rewards.length)];
+    const reward = rewards[Math.floor(Math.random() * rewards.length)];
 
     let bonus = 0;
     if (db[userId].streak === 7) bonus = 20;
@@ -109,7 +115,7 @@ client.on('messageCreate', async msg => {
 
     return msg.reply(
 `✅ Absen sukses!
-🎲 +${koin(reward)}
+🎲 ${koin(reward)}
 🔥 Streak: ${db[userId].streak} hari
 🎁 Bonus: ${koin(bonus)}`
     );
@@ -117,11 +123,11 @@ client.on('messageCreate', async msg => {
 
   if (command === 'kerja') {
     const now = Date.now();
-    const diff = now - db[userId].lastWork;
-
-    if (diff < WORK_COOLDOWN) {
-      const mins = Math.ceil((WORK_COOLDOWN - diff) / 60000);
-      return msg.reply(`⏳ Kamu capek. Kerja lagi ${mins} menit lagi.`);
+    if (now - db[userId].lastWork < WORK_COOLDOWN) {
+      const mins = Math.ceil(
+        (WORK_COOLDOWN - (now - db[userId].lastWork)) / 60000
+      );
+      return msg.reply(`⏳ Kamu bisa kerja lagi ${mins} menit lagi.`);
     }
 
     const jobs = [
@@ -133,7 +139,7 @@ client.on('messageCreate', async msg => {
     ];
 
     const job = jobs[Math.floor(Math.random() * jobs.length)];
-    const salary = Math.floor(Math.random() * 16) + 15; // 15–30
+    const salary = Math.floor(Math.random() * 16) + 15;
 
     db[userId].lastWork = now;
     db[userId].point += salary;
@@ -143,7 +149,7 @@ client.on('messageCreate', async msg => {
 
     return msg.reply(
 `🛠 Kamu kerja sebagai **${job}**
-💰 Gaji: +${koin(salary)}
+💰 Gaji: ${koin(salary)}
 ⏳ Cooldown: 1 jam`
     );
   }
@@ -155,10 +161,9 @@ client.on('messageCreate', async msg => {
 
     let text = '🏆 **TOP 5 KOIN SERVER**\n\n';
     for (let i = 0; i < topUsers.length; i++) {
-      const user = await client.users.fetch(topUsers[i][0]);
-      text += `${i + 1}. **${user.username}** — ${koin(topUsers[i][1].point)}\n`;
+      const u = await client.users.fetch(topUsers[i][0]);
+      text += `${i + 1}. **${u.username}** — ${koin(topUsers[i][1].point)}\n`;
     }
-
     return msg.reply(text);
   }
 
@@ -166,33 +171,51 @@ client.on('messageCreate', async msg => {
     return msg.reply(`🪙 Koin kamu: **${koin(db[userId].point)}**`);
   }
 
+ 
   if (command === 'profile') {
-    return msg.reply(
-`👤 **${msg.author.username}**
-🪙 Koin: ${koin(db[userId].point)}
-🔥 Streak: ${db[userId].streak} hari`
-    );
+    const sorted = Object.entries(db)
+      .sort((a, b) => b[1].point - a[1].point);
+    const rank = sorted.findIndex(u => u[0] === userId) + 1;
+
+    const embed = new EmbedBuilder()
+      .setColor(0x8e44ad)
+      .setAuthor({
+        name: `~${msg.author.username}`,
+        iconURL: msg.author.displayAvatarURL({ dynamic: true })
+      })
+      .setThumbnail(msg.author.displayAvatarURL({ dynamic: true }))
+      .setImage('https://i.imgur.com/3ZUrjUP.png')
+      .addFields(
+        { name: '🪙 Koin', value: koin(db[userId].point), inline: true },
+        { name: '🔥 Streak', value: `${db[userId].streak} hari`, inline: true },
+        { name: '🏆 Rank', value: `#${rank}`, inline: true },
+        { name: '📖 About Me', value: 'Aku member server yang rajin 😎' }
+      )
+      .setFooter({ text: 'Economy Profile • Bot Server' });
+
+    return msg.reply({ embeds: [embed] });
   }
 
-  if (command === 'buy') {
-    const choice = args[0];
-    if (!choice || !SHOP[choice])
-      return msg.reply('❌ Contoh: >>buy vip');
+  if (command === 'addkoin') {
+    if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      return msg.reply('❌ Khusus admin.');
 
-    const item = SHOP[choice];
-    const member = msg.member;
+    const target = msg.mentions.users.first();
+    const amount = parseInt(args[1]);
 
-    if (db[userId].point < item.price)
-      return msg.reply(`❌ Koin kurang. Butuh ${koin(item.price)}`);
+    if (!target || isNaN(amount) || amount <= 0)
+      return msg.reply('❌ Contoh: >>addkoin @user 100');
 
-    const role = msg.guild.roles.cache.find(r => r.name === item.role);
-    if (!role) return msg.reply('❌ Role tidak ada.');
+    if (!db[target.id]) {
+      db[target.id] = { point: 0, lastAbsen: null, streak: 0, lastWork: 0 };
+    }
 
-    db[userId].point -= item.price;
-    await member.roles.add(role);
+    db[target.id].point += amount;
     saveDB();
 
-    return msg.reply(`🎉 Berhasil beli **${item.role}**`);
+    return msg.reply(
+      `✅ ${koin(amount)} berhasil ditambahkan ke **${target.username}**`
+    );
   }
 });
 
@@ -211,4 +234,3 @@ const checkAchievements = async member => {
 };
 
 client.login(process.env.TOKEN);
-
