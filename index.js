@@ -1,8 +1,8 @@
-const { 
-  Client, 
-  GatewayIntentBits, 
+const {
+  Client,
+  GatewayIntentBits,
   EmbedBuilder,
-  PermissionsBitField 
+  PermissionsBitField
 } = require('discord.js');
 const fs = require('fs');
 require('dotenv').config();
@@ -20,14 +20,11 @@ const client = new Client({
 
 const DB_FILE = './database.json';
 let db = {};
-
 if (fs.existsSync(DB_FILE)) {
   db = JSON.parse(fs.readFileSync(DB_FILE));
 }
-
 const saveDB = () =>
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-
 
 const koin = n => `${n.toLocaleString('id-ID')} 🪙`;
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -47,7 +44,7 @@ const ACHIEVEMENTS = [
 ];
 
 client.once('ready', () => {
-  console.log('🤖 Bot ONLINE (Economy + Profile Embed)');
+  console.log('🤖 Bot ONLINE (Economy RPG)');
 });
 
 client.on('messageCreate', async msg => {
@@ -74,17 +71,15 @@ client.on('messageCreate', async msg => {
     return msg.reply(
 `📖 **COMMAND BOT**
 
-🗓 >>absen → Absen (random + streak)
-🛠 >>kerja → Kerja (1 jam cooldown)
-🏆 >>top → Leaderboard koin
+🗓 >>absen → Absen random + streak
+🛠 >>kerja → Kerja (1 jam)
+🏆 >>top → Leaderboard
 🪙 >>koin → Cek koin
-👤 >>profile → Profile keren
+👤 >>profile → Profile RPG
 🛒 >>buy vip|elite|legend|mythic
 
 👑 ADMIN
->>addkoin @user jumlah
-
-🪙 Koin bersifat virtual`
+>>addkoin @user jumlah`
     );
   }
 
@@ -127,17 +122,10 @@ client.on('messageCreate', async msg => {
       const mins = Math.ceil(
         (WORK_COOLDOWN - (now - db[userId].lastWork)) / 60000
       );
-      return msg.reply(`⏳ Kamu bisa kerja lagi ${mins} menit lagi.`);
+      return msg.reply(`⏳ Tunggu ${mins} menit lagi.`);
     }
 
-    const jobs = [
-      'Programmer 💻',
-      'Barista ☕',
-      'Driver 🚗',
-      'Designer 🎨',
-      'Gamer 🎮'
-    ];
-
+    const jobs = ['Programmer 💻','Barista ☕','Driver 🚗','Designer 🎨','Gamer 🎮'];
     const job = jobs[Math.floor(Math.random() * jobs.length)];
     const salary = Math.floor(Math.random() * 16) + 15;
 
@@ -159,7 +147,7 @@ client.on('messageCreate', async msg => {
       .sort((a, b) => b[1].point - a[1].point)
       .slice(0, 5);
 
-    let text = '🏆 **TOP 5 KOIN SERVER**\n\n';
+    let text = '🏆 **TOP 5 KOIN**\n\n';
     for (let i = 0; i < topUsers.length; i++) {
       const u = await client.users.fetch(topUsers[i][0]);
       text += `${i + 1}. **${u.username}** — ${koin(topUsers[i][1].point)}\n`;
@@ -171,30 +159,50 @@ client.on('messageCreate', async msg => {
     return msg.reply(`🪙 Koin kamu: **${koin(db[userId].point)}**`);
   }
 
- 
   if (command === 'profile') {
-    const sorted = Object.entries(db)
-      .sort((a, b) => b[1].point - a[1].point);
+    const sorted = Object.entries(db).sort((a,b)=>b[1].point-a[1].point);
     const rank = sorted.findIndex(u => u[0] === userId) + 1;
 
     const embed = new EmbedBuilder()
-      .setColor(0x8e44ad)
+      .setColor(0x9b59b6)
       .setAuthor({
-        name: `~${msg.author.username}`,
-        iconURL: msg.author.displayAvatarURL({ dynamic: true })
+        name: msg.author.username,
+        iconURL: msg.author.displayAvatarURL({ dynamic:true })
       })
-      .setThumbnail(msg.author.displayAvatarURL({ dynamic: true }))
-      .setImage('https://i.imgur.com/3ZUrjUP.png')
+      .setThumbnail(msg.author.displayAvatarURL({ dynamic:true }))
       .addFields(
-        { name: '🪙 Koin', value: koin(db[userId].point), inline: true },
-        { name: '🔥 Streak', value: `${db[userId].streak} hari`, inline: true },
-        { name: '🏆 Rank', value: `#${rank}`, inline: true },
-        { name: '📖 About Me', value: 'Aku member server yang rajin 😎' }
+        { name:'🪙 Koin', value:koin(db[userId].point), inline:true },
+        { name:'🔥 Streak', value:`${db[userId].streak} hari`, inline:true },
+        { name:'🏆 Rank', value:`#${rank}`, inline:true },
+        { name:'📖 About Me', value:'Member rajin server 😎' }
       )
-      .setFooter({ text: 'Economy Profile • Bot Server' });
+      .setFooter({ text:'Economy RPG Bot' });
 
-    return msg.reply({ embeds: [embed] });
+    return msg.reply({ embeds:[embed] });
   }
+
+  if (command === 'buy') {
+    const choice = args[0]?.toLowerCase();
+    if (!choice || !SHOP[choice])
+      return msg.reply('❌ Contoh: `>>buy vip`');
+
+    const item = SHOP[choice];
+    const role = msg.guild.roles.cache.find(r => r.name === item.role);
+    if (!role) return msg.reply(`❌ Role ${item.role} tidak ada.`);
+
+    if (msg.member.roles.cache.has(role.id))
+      return msg.reply('⚠️ Kamu sudah punya role ini.');
+
+    if (db[userId].point < item.price)
+      return msg.reply(`❌ Koin kurang. Butuh ${koin(item.price)}`);
+
+    await msg.member.roles.add(role);
+    db[userId].point -= item.price;
+    saveDB();
+
+    return msg.reply(`✅ Berhasil membeli **${item.role}** (-${koin(item.price)})`);
+  }
+
 
   if (command === 'addkoin') {
     if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
@@ -202,35 +210,29 @@ client.on('messageCreate', async msg => {
 
     const target = msg.mentions.users.first();
     const amount = parseInt(args[1]);
-
-    if (!target || isNaN(amount) || amount <= 0)
+    if (!target || isNaN(amount))
       return msg.reply('❌ Contoh: >>addkoin @user 100');
 
-    if (!db[target.id]) {
-      db[target.id] = { point: 0, lastAbsen: null, streak: 0, lastWork: 0 };
-    }
+    if (!db[target.id])
+      db[target.id] = { point:0, lastAbsen:null, streak:0, lastWork:0 };
 
     db[target.id].point += amount;
     saveDB();
 
-    return msg.reply(
-      `✅ ${koin(amount)} berhasil ditambahkan ke **${target.username}**`
-    );
+    return msg.reply(`✅ ${koin(amount)} ditambahkan ke ${target.username}`);
   }
 });
 
-const checkAchievements = async member => {
+async function checkAchievements(member) {
   const userData = db[member.id];
   if (!userData) return;
 
   for (const ach of ACHIEVEMENTS) {
     const role = member.guild.roles.cache.find(r => r.name === ach.name);
-    if (!role) continue;
-
-    if (userData.point >= ach.point && !member.roles.cache.has(role.id)) {
-      await member.roles.add(role).catch(() => {});
+    if (role && userData.point >= ach.point && !member.roles.cache.has(role.id)) {
+      await member.roles.add(role).catch(()=>{});
     }
   }
-};
+}
 
 client.login(process.env.TOKEN);
