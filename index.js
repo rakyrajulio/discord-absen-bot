@@ -30,10 +30,10 @@ const koin = n => `${n.toLocaleString('id-ID')} 🪙`;
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 const SHOP = {
-  vip: { role: 'VIP', price: 100 },
-  elite: { role: 'ELITE', price: 300 },
-  legend: { role: 'LEGEND', price: 700 },
-  mythic: { role: 'MYTHIC', price: 1500 }
+  vip: { role: 'VIP', price: 400 },
+  elite: { role: 'ELITE', price: 800 },
+  legend: { role: 'LEGEND', price: 1000 },
+  mythic: { role: 'MYTHIC', price: 5500 }
 };
 
 const ACHIEVEMENTS = [
@@ -78,8 +78,6 @@ client.on('messageCreate', async msg => {
 👤 >>profile → Profile RPG
 🛒 >>buy vip|elite|legend|mythic
 
-👑 ADMIN
->>addkoin @user jumlah`
     );
   }
 
@@ -94,7 +92,7 @@ client.on('messageCreate', async msg => {
     db[userId].streak =
       db[userId].lastAbsen === yStr ? db[userId].streak + 1 : 1;
 
-    const rewards = [3, 5, 7, 10, 15];
+    const rewards = [3, 5, 7, 8, 10];
     const reward = rewards[Math.floor(Math.random() * rewards.length)];
 
     let bonus = 0;
@@ -236,3 +234,4 @@ async function checkAchievements(member) {
 }
 
 client.login(process.env.TOKEN);
+
