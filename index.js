@@ -13,7 +13,6 @@ const client = new Client({
   ]
 });
 
-// ================= DATABASE =================
 const DB_FILE = './database.json';
 let db = {};
 
@@ -24,11 +23,9 @@ if (fs.existsSync(DB_FILE)) {
 const saveDB = () =>
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-// ================= UTIL =================
 const koin = (n) => `${n.toLocaleString('id-ID')} 🪙`;
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
-// ================= SHOP =================
 const SHOP = {
   vip: { role: 'VIP', price: 100 },
   elite: { role: 'ELITE', price: 300 },
@@ -36,7 +33,6 @@ const SHOP = {
   mythic: { role: 'MYTHIC', price: 1500 }
 };
 
-// ================= ACHIEVEMENT =================
 const ACHIEVEMENTS = [
   { name: 'ACTIVE MEMBER', point: 50 },
   { name: 'CONSISTENT', point: 200 },
@@ -48,7 +44,6 @@ client.once('ready', () => {
   console.log('🤖 Bot ONLINE (>> ekonomi)');
 });
 
-// ================= MESSAGE =================
 client.on('messageCreate', async msg => {
   if (msg.author.bot) return;
   if (!msg.content.startsWith(PREFIX)) return;
@@ -69,7 +64,6 @@ client.on('messageCreate', async msg => {
   const args = msg.content.slice(PREFIX.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  // ================= HELP =================
   if (command === 'help') {
     return msg.reply(
 `📖 **COMMAND BOT**
@@ -85,7 +79,6 @@ client.on('messageCreate', async msg => {
     );
   }
 
-  // ================= ABSEN + STREAK =================
   if (command === 'absen') {
     if (db[userId].lastAbsen === today)
       return msg.reply('❌ Kamu sudah absen hari ini.');
@@ -122,7 +115,6 @@ client.on('messageCreate', async msg => {
     );
   }
 
-  // ================= KERJA =================
   if (command === 'kerja') {
     const now = Date.now();
     const diff = now - db[userId].lastWork;
@@ -156,7 +148,6 @@ client.on('messageCreate', async msg => {
     );
   }
 
-  // ================= TOP =================
   if (command === 'top') {
     const topUsers = Object.entries(db)
       .sort((a, b) => b[1].point - a[1].point)
@@ -171,12 +162,10 @@ client.on('messageCreate', async msg => {
     return msg.reply(text);
   }
 
-  // ================= KOIN =================
   if (command === 'koin') {
     return msg.reply(`🪙 Koin kamu: **${koin(db[userId].point)}**`);
   }
 
-  // ================= PROFILE =================
   if (command === 'profile') {
     return msg.reply(
 `👤 **${msg.author.username}**
@@ -185,7 +174,6 @@ client.on('messageCreate', async msg => {
     );
   }
 
-  // ================= BUY =================
   if (command === 'buy') {
     const choice = args[0];
     if (!choice || !SHOP[choice])
@@ -208,7 +196,6 @@ client.on('messageCreate', async msg => {
   }
 });
 
-// ================= ACHIEVEMENT =================
 const checkAchievements = async member => {
   const userData = db[member.id];
   if (!userData) return;
@@ -224,3 +211,4 @@ const checkAchievements = async member => {
 };
 
 client.login(process.env.TOKEN);
+
