@@ -39,8 +39,9 @@ const SHOP = {
   mythic: { role: 'MYTHIC', price: 3000 }
 };
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log('🤖 Economy RPG Bot ONLINE');
+
 });
 
 client.on('messageCreate', async msg => {
@@ -124,25 +125,47 @@ client.on('messageCreate', async msg => {
   }
 
   if (cmd === 'kerja') {
-    if (now - db[uid].lastWork < WORK_COOLDOWN) {
-      const m = Math.ceil((WORK_COOLDOWN - (now - db[uid].lastWork)) / 60000);
-      return msg.reply(`⏳ Tunggu ${m} menit`);
-    }
 
-    const base = Math.floor(Math.random() * 20) + 20;
-    const bonus = Math.min(db[uid].level * 2, 100);
-    const total = base + bonus;
+  const WORK_COOLDOWN = 30 * 60 * 1000; 
 
-    db[uid].coin += total;
-    db[uid].lastWork = now;
-    saveDB();
+  if (now - db[uid].lastWork < WORK_COOLDOWN) {
+    const sisa = WORK_COOLDOWN - (now - db[uid].lastWork);
+    const menit = Math.floor(sisa / 60000);
+    const detik = Math.floor((sisa % 60000) / 1000);
+    return msg.reply(`⏳ Kamu masih capek...\nTunggu ${menit}m ${detik}s lagi`);
+  }
 
-    return msg.reply(
-`🛠 Kamu bekerja
-💵 Gaji: ${koin(base)}
-⭐ Bonus level: ${koin(bonus)}
-💰 Total: **${koin(total)}**`
-    );
+  
+  const jobs = [
+    { name: "🧹 Tukang Bersih-bersih", min: 15, max: 25 },
+    { name: "🍜 Penjual Mie", min: 20, max: 35 },
+    { name: "🚚 Kurir Paket", min: 25, max: 45 },
+    { name: "💻 Programmer Freelance", min: 40, max: 70 },
+    { name: "🎮 Joki Game", min: 30, max: 55 },
+    { name: "🏗 Kuli Bangunan", min: 20, max: 40 }
+  ];
+
+  const job = jobs[Math.floor(Math.random() * jobs.length)];
+
+  const baseSalary =
+    Math.floor(Math.random() * (job.max - job.min + 1)) + job.min;
+
+  
+  const levelBonus = Math.floor(db[uid].level * 3);
+
+  const total = baseSalary + levelBonus;
+
+  db[uid].coin += total;
+  db[uid].lastWork = now;
+  saveDB();
+
+  return msg.reply(
+`🛠 **Kamu bekerja sebagai ${job.name}**
+💵 Gaji dasar: ${koin(baseSalary)}
+⭐ Bonus level (Lv ${db[uid].level}): ${koin(levelBonus)}
+
+💰 Total diterima: **${koin(total)}**`
+  );
   }
 
   if (cmd === 'buy') {
@@ -281,3 +304,4 @@ client.on('messageCreate', async msg => {
 });
 
 client.login(process.env.TOKEN);
+
