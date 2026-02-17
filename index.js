@@ -411,29 +411,31 @@ if (cmd === 'fish') {
   
   const fishes = [
 
-  { name: "🐟 Ikan Lele", chance: 15, min: 20, max: 40, xp: 15 },
-  { name: "🐠 Ikan Nila", chance: 15, min: 25, max: 45, xp: 18 },
-  { name: "🐡 Ikan Buntal", chance: 12, min: 30, max: 50, xp: 20 },
-  { name: "🦐 Udang Sungai", chance: 10, min: 15, max: 35, xp: 12 },
-  { name: "🦀 Kepiting", chance: 8, min: 20, max: 40, xp: 18 },
 
- 
-  { name: "🐬 Lumba-Lumba Kecil", chance: 6, min: 60, max: 100, xp: 40 },
-  { name: "🦈 Hiu Karang", chance: 5, min: 70, max: 120, xp: 55 },
-  { name: "🐙 Gurita Laut", chance: 6, min: 50, max: 90, xp: 35 },
-  { name: "🐢 Penyu Laut", chance: 5, min: 60, max: 110, xp: 45 },
+  { name: "🐟 Ikan Lele", chance: 15, min: 20, max: 40, xp: 15, tier: "Common" },
+  { name: "🐠 Ikan Nila", chance: 15, min: 25, max: 45, xp: 18, tier: "Common" },
+  { name: "🐡 Ikan Buntal", chance: 12, min: 30, max: 50, xp: 20, tier: "Common" },
+  { name: "🦐 Udang Sungai", chance: 10, min: 15, max: 35, xp: 12, tier: "Common" },
+  { name: "🦀 Kepiting", chance: 8, min: 20, max: 40, xp: 18, tier: "Common" },
 
-  { name: "💎 Golden Fish", chance: 3, min: 120, max: 180, xp: 80, rare: true },
-  { name: "🔥 Lava Fish", chance: 2, min: 130, max: 190, xp: 90, rare: true },
-  { name: "❄ Ice Fish", chance: 2, min: 120, max: 170, xp: 85, rare: true },
-  { name: "⚡ Thunder Fish", chance: 1, min: 150, max: 220, xp: 100, rare: true },
+  { name: "🐬 Lumba-Lumba Kecil", chance: 6, min: 60, max: 100, xp: 40, tier: "Rare" },
+  { name: "🦈 Hiu Karang", chance: 5, min: 70, max: 120, xp: 55, tier: "Rare" },
+  { name: "🐙 Gurita Laut", chance: 6, min: 50, max: 90, xp: 35, tier: "Rare" },
+  { name: "🐢 Penyu Laut", chance: 5, min: 60, max: 110, xp: 45, tier: "Rare" },
 
-  { name: "🌊 Kraken Muda", chance: 1.5, min: 200, max: 300, xp: 130, rare: true },
-  { name: "🌟 Celestial Carp", chance: 1, min: 220, max: 320, xp: 150, rare: true },
-  { name: "🌈 Rainbow Dragonfish", chance: 0.5, min: 250, max: 350, xp: 180, legend: true },
+  { name: "💎 Golden Fish", chance: 3, min: 120, max: 180, xp: 80, tier: "Rare" },
+  { name: "🔥 Lava Fish", chance: 2, min: 130, max: 190, xp: 90, tier: "Rare" },
+  { name: "❄ Ice Fish", chance: 2, min: 120, max: 170, xp: 85, tier: "Rare" },
+  { name: "⚡ Thunder Fish", chance: 1, min: 150, max: 220, xp: 100, tier: "Rare" },
+    
+  { name: "🌊 Kraken Muda", chance: 1.5, min: 200, max: 300, xp: 130, tier: "Legendary" },
+  { name: "🌟 Celestial Carp", chance: 1, min: 220, max: 320, xp: 150, tier: "Legendary" },
+  { name: "🌈 Rainbow Dragonfish", chance: 0.5, min: 250, max: 350, xp: 180, tier: "Legendary" },
+  { name: "🐉 Ancient Dragon Fish", chance: 0.5, min: 300, max: 450, xp: 250, tier: "Legendary" },
+  { name: "👑 King of The Ocean", chance: 0.5, min: 350, max: 500, xp: 300, tier: "Legendary" }
 
-  { name: "🐉 Ancient Dragon Fish", chance: 0.5, min: 300, max: 450, xp: 250, legend: true },
-  { name: "👑 King of The Ocean", chance: 0.5, min: 350, max: 500, xp: 300, legend: true }
+];
+
 
 ];
 
@@ -460,7 +462,7 @@ if (cmd === 'fish') {
   db[uid].fish++;
 
   if (selected.tier === "Rare") db[uid].rareFish++;
-  if (selected.tier === "Legendary") db[uid].legendFish++;
+if (selected.tier === "Legendary") db[uid].legendFish++;
 
   let newRecord = false;
   if (!db[uid].biggestFish || size > db[uid].biggestFish) {
@@ -790,6 +792,7 @@ if (cmd === 'fish') {
 });
 
 client.login(process.env.TOKEN);
+
 
 
 
