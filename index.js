@@ -14,8 +14,6 @@ const DUEL_COOLDOWN = 60 * 1000;
 const TAX_RATE = 0.05; 
 const pendingDuels = {};
 
-let pendingDuels = {};
-
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -447,5 +445,6 @@ if (cmd === 'accept') {
 });
 
 client.login(process.env.TOKEN);
+
 
 
