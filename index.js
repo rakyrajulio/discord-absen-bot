@@ -674,14 +674,18 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   const target = msg.mentions.users.first();
   const amt = parseInt(args[1]);
 
-  if (!target || isNaN(amt))
-    return msg.reply('Format: `.addkoin @user 100`');
+  if (!target)
+    return msg.reply('❌ Tag user yang ingin ditambahkan koin.\nFormat: `.addkoin @user 100`');
+
+  if (!amt || isNaN(amt))
+    return msg.reply('❌ Masukkan jumlah koin yang valid.\nFormat: `.addkoin @user 100`');
 
   if (amt <= 0)
     return msg.reply('❌ Jumlah harus lebih dari 0.');
 
   if (target.bot)
     return msg.reply('❌ Tidak bisa menambahkan koin ke bot.');
+  }
 
   db[target.id].coin += amt;
   saveDB();
@@ -689,18 +693,19 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   const embed = new EmbedBuilder()
     .setColor(0xf1c40f)
     .setTitle("🛠 ADMIN ACTION • ADD KOIN")
-    .setThumbnail(target.displayAvatarURL())
+    .setThumbnail(target.displayAvatarURL({ dynamic: true }))
     .addFields(
-      { name: "👤 Target", value: target.username, inline: true },
+      { name: "👤 Target", value: `<@${target.id}>`, inline: true },
       { name: "💰 Ditambahkan", value: koin(amt), inline: true },
       { name: "📊 Saldo Sekarang", value: koin(db[target.id].coin), inline: true },
-      { name: "🛡 Admin", value: msg.author.username, inline: false }
+      { name: "🛡 Admin", value: `<@${msg.author.id}>`, inline: false }
     )
     .setFooter({ text: "Sistem Ekonomi RPG • Admin Control" })
     .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
+
 
   if (cmd === 'addstreak') {
     if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
@@ -722,6 +727,7 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
 });
 
 client.login(process.env.TOKEN);
+
 
 
 
