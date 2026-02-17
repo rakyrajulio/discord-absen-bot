@@ -11,6 +11,7 @@ const PREFIX = '.';
 const WORK_COOLDOWN = 30 * 60 * 1000;
 const XP_COOLDOWN = 60 * 1000;
 const FISH_COOLDOWN = 60 * 1000;
+const TAX_RATE = 0.05;
 
 const client = new Client({
   intents: [
@@ -42,26 +43,26 @@ function progressBar(current, max, size = 15) {
 function generateQuest() {
   const quests = [
 
-  // 💬 CHAT QUEST
+  
   { type: "chat", target: 10, reward: 80, text: "Kirim 10 pesan" },
   { type: "chat", target: 20, reward: 120, text: "Kirim 20 pesan" },
 
-  // 🛠 WORK QUEST
+ 
   { type: "work", target: 2, reward: 90, text: "Kerja 2 kali" },
   { type: "work", target: 5, reward: 150, text: "Kerja 5 kali" },
 
-  // ⭐ XP QUEST
+ 
   { type: "xp", target: 150, reward: 100, text: "Dapatkan 150 XP" },
   { type: "xp", target: 300, reward: 180, text: "Dapatkan 300 XP" },
 
-  // 🎣 FISH QUEST
+  
   { type: "fish", target: 5, reward: 100, text: "Tangkap 5 ikan" },
   { type: "rareFish", target: 1, reward: 200, text: "Dapatkan 1 Rare Fish" },
 
-  // 🔥 STREAK QUEST
+
   { type: "streak", target: 3, reward: 120, text: "Login 3 hari berturut" },
 
-  // 👑 LEVEL QUEST
+  
   { type: "level", target: 1, reward: 150, text: "Naik 1 level" }
 
 ];
@@ -80,24 +81,43 @@ client.on('messageCreate', async msg => {
   const now = Date.now();
 
   if (!db[uid]) {
-    db[uid] = {
-      coin: 0,
-      xp: 0,
-      level: 1,
-      lastXp: 0,
-      lastWork: 0,
-      lastAbsen: null,
-      streak: 0,
-      fish: 0,
-      rareFish: 0,
-      legendFish: 0,
-      lastFish: 0,
-      dailyQuest: null
-      
-    };
-    saveDB();
-  }
+  db[uid] = {
+  
+    coin: 0,
+    bank: 0,
 
+   
+    xp: 0,
+    level: 1,
+    lastXp: 0,
+
+   
+    lastWork: 0,
+    lastFish: 0,
+
+    lastAbsen: null,
+    streak: 0,
+    dailyQuest: null,
+
+   
+    fish: 0,
+    rareFish: 0,
+    legendFish: 0,
+    biggestFish: 0,
+
+    
+    totalWork: 0,
+    totalChat: 0,
+    totalTransfer: 0,
+    totalEarned: 0,
+
+
+    inventory: [],
+    rod: "Basic Rod"
+  };
+
+  saveDB();
+}
 
   const today = todayStr();
   if (!db[uid].dailyQuest || db[uid].dailyQuest.date !== today) {
@@ -110,17 +130,22 @@ client.on('messageCreate', async msg => {
     };
   }
 
-
   if (now - db[uid].lastXp > XP_COOLDOWN) {
     const gain = Math.floor(Math.random() * 10) + 5;
     db[uid].xp += gain;
     db[uid].lastXp = now;
 
-    if (db[uid].dailyQuest?.type === "xp")
-      db[uid].dailyQuest.progress += gain;
+   if (db[uid].dailyQuest && !db[uid].dailyQuest.claimed) {
 
-    if (db[uid].dailyQuest?.type === "chat")
-      db[uid].dailyQuest.progress++;
+  if (db[uid].dailyQuest.type === "xp")
+    db[uid].dailyQuest.progress += gain;
+
+  if (db[uid].dailyQuest.type === "chat")
+    db[uid].dailyQuest.progress++;
+
+  if (db[uid].dailyQuest.progress > db[uid].dailyQuest.target)
+    db[uid].dailyQuest.progress = db[uid].dailyQuest.target;
+}
 
     while (db[uid].xp >= xpNeed(db[uid].level)) {
       db[uid].xp -= xpNeed(db[uid].level);
@@ -185,27 +210,58 @@ client.on('messageCreate', async msg => {
 }
 
   if (cmd === 'absen') {
-    if (db[uid].lastAbsen === today)
-      return msg.reply('❌ Sudah absen hari ini');
 
-    const reward = Math.floor(Math.random() * 10) + 5;
-    db[uid].coin += reward;
-    db[uid].streak++;
-    db[uid].lastAbsen = today;
-    saveDB();
+  if (db[uid].lastAbsen === today)
+    return msg.reply('❌ Kamu sudah absen hari ini.');
 
-    return msg.reply(`✅ Absen sukses\n🎁 ${koin(reward)}\n🔥 Streak: ${db[uid].streak}`);
+  // 🔥 Streak reset kalau bolong
+  if (db[uid].lastAbsen) {
+    const yesterday = new Date(Date.now() - 86400000)
+      .toISOString()
+      .slice(0, 10);
+
+    if (db[uid].lastAbsen !== yesterday) {
+      db[uid].streak = 0;
+    }
   }
+
+  db[uid].streak++;
+
+  const base = 20;
+  const streakBonus = db[uid].streak * 5;
+  const total = base + streakBonus;
+
+  db[uid].coin += total;
+  db[uid].totalEarned += total;
+  db[uid].lastAbsen = today;
+
+  if (db[uid].dailyQuest?.type === "streak")
+    db[uid].dailyQuest.progress++;
+
+  saveDB();
+
+  const embed = new EmbedBuilder()
+    .setColor(0x00ff88)
+    .setTitle("🗓 DAILY ABSEN")
+    .addFields(
+      { name: "💰 Reward", value: koin(base), inline: true },
+      { name: "🔥 Streak Bonus", value: koin(streakBonus), inline: true },
+      { name: "💎 Total", value: koin(total), inline: true },
+      { name: "🔥 Streak Sekarang", value: `${db[uid].streak} hari`, inline: false }
+    )
+    .setFooter({ text: "Login tiap hari untuk bonus lebih besar!" });
+
+  return msg.reply({ embeds: [embed] });
+}
 
   if (cmd === 'kerja') {
 
-    if (now - db[uid].lastWork < WORK_COOLDOWN) {
-      const sisa = WORK_COOLDOWN - (now - db[uid].lastWork);
-      const m = Math.floor(sisa / 60000);
-      const s = Math.floor((sisa % 60000) / 1000);
-      return msg.reply(`⏳ Tunggu ${m}m ${s}s lagi`);
-    }
-
+  if (now - db[uid].lastWork < WORK_COOLDOWN) {
+    const sisa = WORK_COOLDOWN - (now - db[uid].lastWork);
+    const m = Math.floor(sisa / 60000);
+    const s = Math.floor((sisa % 60000) / 1000);
+    return msg.reply(`⏳ Kamu lelah... tunggu ${m}m ${s}s lagi.`);
+  }
    const jobs = [
 
   { name: "🧹 Tukang Bersih", min: 15, max: 25 },
@@ -246,28 +302,52 @@ client.on('messageCreate', async msg => {
   { name: "🛰 Engineer AI", min: 65, max: 120 }
 
 ];
+const job = jobs[Math.floor(Math.random() * jobs.length)];
+  const base = Math.floor(Math.random() * (job.max - job.min + 1)) + job.min;
+  const levelBonus = db[uid].level * 3;
+  const streakBonus = db[uid].streak * 2;
 
+  const total = base + levelBonus + streakBonus;
 
-    const job = jobs[Math.floor(Math.random() * jobs.length)];
-    const base = Math.floor(Math.random() * (job.max - job.min + 1)) + job.min;
-    const bonus = db[uid].level * 3;
-    const total = base + bonus;
+  const xpGain = Math.floor(total / 5);
 
-    db[uid].coin += total;
-    db[uid].lastWork = now;
+  db[uid].coin += total;
+  db[uid].xp += xpGain;
+  db[uid].totalWork++;
+  db[uid].totalEarned += total;
+  db[uid].lastWork = now;
 
-    if (db[uid].dailyQuest?.type === "work")
-      db[uid].dailyQuest.progress++;
+  if (db[uid].dailyQuest?.type === "work")
+    db[uid].dailyQuest.progress++;
 
-    saveDB();
+  while (db[uid].xp >= xpNeed(db[uid].level)) {
+    db[uid].xp -= xpNeed(db[uid].level);
+    db[uid].level++;
+    const bonus = db[uid].level * 15;
+    db[uid].coin += bonus;
 
-    return msg.reply(
-`🛠 ${job.name}
-💵 Gaji: ${koin(base)}
-⭐ Bonus Lv ${db[uid].level}: ${koin(bonus)}
-💰 Total: ${koin(total)}`
+    msg.channel.send(
+      `🎉 ${msg.author.username} naik ke Level ${db[uid].level}!\n🪙 Bonus: ${koin(bonus)}`
     );
   }
+
+  saveDB();
+
+  const embed = new EmbedBuilder()
+    .setColor(0xffcc00)
+    .setTitle("🛠 HASIL KERJA")
+    .addFields(
+      { name: "💼 Pekerjaan", value: job.name, inline: false },
+      { name: "💵 Gaji Dasar", value: koin(base), inline: true },
+      { name: "⭐ Bonus Level", value: koin(levelBonus), inline: true },
+      { name: "🔥 Bonus Streak", value: koin(streakBonus), inline: true },
+      { name: "💎 Total", value: koin(total), inline: true },
+      { name: "⭐ XP Dapat", value: `+${xpGain}`, inline: true }
+    )
+    .setFooter({ text: "Kerja keras meningkatkan level!" });
+
+  return msg.reply({ embeds: [embed] });
+}
 
   if (cmd === 'quest') {
 
@@ -282,7 +362,7 @@ client.on('messageCreate', async msg => {
   const empty = barSize - filled;
   const bar = '▰'.repeat(filled) + '▱'.repeat(empty);
 
-  // 🎉 Claim reward otomatis kalau selesai
+  
   if (q.progress >= q.target && !q.claimed) {
     db[uid].coin += q.reward;
     q.claimed = true;
@@ -427,25 +507,6 @@ ${selected.legend ? "🐉 LEGENDARY FISH!!!" : ""}`
   if (db[uid].coin < amt)
     return msg.reply('❌ Koin kamu tidak cukup.');
 
-  // ✅ Buat data target kalau belum ada
-  if (!db[target.id]) {
-    db[target.id] = {
-      coin: 0,
-      xp: 0,
-      level: 1,
-      lastXp: 0,
-      lastWork: 0,
-      lastAbsen: null,
-      streak: 0,
-      lastDuel: 0,
-      dailyQuest: null,
-      fish: 0,
-      rareFish: 0,
-      legendFish: 0,
-      lastFish: 0
-    };
-  }
-
   const tax = Math.floor(amt * TAX_RATE);
   const receive = amt - tax;
 
@@ -469,25 +530,47 @@ ${selected.legend ? "🐉 LEGENDARY FISH!!!" : ""}`
   return msg.reply({ embeds: [embed] });
 }
 
-  if (cmd === 'topfish') {
+ if (cmd === 'topfish') {
 
-  const list = Object.entries(db)
+  const page = parseInt(args[0]) || 1;
+  const perPage = 10;
+
+  const sorted = Object.entries(db)
     .sort((a, b) => (b[1].fish || 0) - (a[1].fish || 0));
 
-  let text = '🏆 RANKING PEMANCING 🏆\n\n';
+  const totalPages = Math.ceil(sorted.length / perPage);
 
-  for (let i = 0; i < list.length; i++) {
-    const user = await client.users.fetch(list[i][0]);
-    text += `${i + 1}. ${user.username}
-🎣 ${list[i][1].fish || 0} ikan
-💎 ${list[i][1].rareFish || 0}
-🐉 ${list[i][1].legendFish || 0}
+  if (page < 1 || page > totalPages)
+    return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
+
+  const start = (page - 1) * perPage;
+  const end = start + perPage;
+
+  const current = sorted.slice(start, end);
+
+  let desc = "";
+
+  for (let i = 0; i < current.length; i++) {
+    const rank = start + i + 1;
+    const user = await client.users.fetch(current[i][0]);
+
+    desc += `**${rank}. ${user.username}**
+🎣 ${current[i][1].fish || 0} ikan
+💎 ${current[i][1].rareFish || 0}
+🐉 ${current[i][1].legendFish || 0}
 
 `;
   }
 
-  return msg.reply(text);
+  const embed = new EmbedBuilder()
+    .setColor(0x00ccff)
+    .setTitle("🎣 TOP FISHERMAN SERVER")
+    .setDescription(desc || "Belum ada pemancing.")
+    .setFooter({ text: `Halaman ${page} dari ${totalPages}` });
+
+  return msg.reply({ embeds: [embed] });
 }
+
 
   if (cmd === 'profile') {
     const needed = xpNeed(db[uid].level);
@@ -512,26 +595,74 @@ ${selected.legend ? "🐉 LEGENDARY FISH!!!" : ""}`
   }
 
   if (cmd === 'top') {
-    const list = Object.entries(db).sort((a, b) => b[1].coin - a[1].coin);
 
-    let text = '🏆 TOP KOIN\n\n';
-    for (let i = 0; i < list.length; i++) {
-      const u = await client.users.fetch(list[i][0]);
-      text += `${i + 1}. ${u.username} — ${koin(list[i][1].coin)}\n`;
-    }
-    return msg.reply(text);
+  const page = parseInt(args[0]) || 1;
+  const perPage = 10;
+
+  const sorted = Object.entries(db)
+    .sort((a, b) => b[1].coin - a[1].coin);
+
+  const totalPages = Math.ceil(sorted.length / perPage);
+
+  if (page < 1 || page > totalPages)
+    return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
+
+  const start = (page - 1) * perPage;
+  const end = start + perPage;
+
+  const current = sorted.slice(start, end);
+
+  let desc = "";
+
+  for (let i = 0; i < current.length; i++) {
+    const rank = start + i + 1;
+    const user = await client.users.fetch(current[i][0]);
+    desc += `**${rank}. ${user.username}** — ${koin(current[i][1].coin)}\n`;
   }
+
+  const embed = new EmbedBuilder()
+    .setColor(0xffd700)
+    .setTitle("🏆 TOP KOIN SERVER")
+    .setDescription(desc || "Belum ada data.")
+    .setFooter({ text: `Halaman ${page} dari ${totalPages}` });
+
+  return msg.reply({ embeds: [embed] });
+}
 
   if (cmd === 'toplevel') {
-    const list = Object.entries(db).sort((a, b) => b[1].level - a[1].level);
 
-    let text = '🏆 TOP LEVEL\n\n';
-    for (let i = 0; i < list.length; i++) {
-      const u = await client.users.fetch(list[i][0]);
-      text += `${i + 1}. ${u.username} — Lv ${list[i][1].level}\n`;
-    }
-    return msg.reply(text);
+  const page = parseInt(args[0]) || 1;
+  const perPage = 10;
+
+  const sorted = Object.entries(db)
+    .sort((a, b) => b[1].level - a[1].level);
+
+  const totalPages = Math.ceil(sorted.length / perPage);
+
+  if (page < 1 || page > totalPages)
+    return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
+
+  const start = (page - 1) * perPage;
+  const end = start + perPage;
+
+  const current = sorted.slice(start, end);
+
+  let desc = "";
+
+  for (let i = 0; i < current.length; i++) {
+    const rank = start + i + 1;
+    const user = await client.users.fetch(current[i][0]);
+    desc += `**${rank}. ${user.username}** — Lv ${current[i][1].level}\n`;
   }
+
+  const embed = new EmbedBuilder()
+    .setColor(0x5865F2)
+    .setTitle("🏆 TOP LEVEL SERVER")
+    .setDescription(desc || "Belum ada data.")
+    .setFooter({ text: `Halaman ${page} dari ${totalPages}` });
+
+  return msg.reply({ embeds: [embed] });
+}
 
   if (cmd === 'addkoin') {
     if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
@@ -569,6 +700,7 @@ ${selected.legend ? "🐉 LEGENDARY FISH!!!" : ""}`
 });
 
 client.login(process.env.TOKEN);
+
 
 
 
