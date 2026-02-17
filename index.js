@@ -81,42 +81,33 @@ client.on('messageCreate', async msg => {
   const uid = msg.author.id;
   const now = Date.now();
 
-  if (!db[uid]) {
-  db[uid] = {
-  
-    coin: 0,
-    bank: 0,
-
-   
-    xp: 0,
-    level: 1,
-    lastXp: 0,
-
-   
-    lastWork: 0,
-    lastFish: 0,
-
-    lastAbsen: null,
-    streak: 0,
-    dailyQuest: null,
-
-   
-    fish: 0,
-    rareFish: 0,
-    legendFish: 0,
-    biggestFish: 0,
-
-    
-    totalWork: 0,
-    totalChat: 0,
-    totalTransfer: 0,
-    totalEarned: 0,
-
-
-    inventory: [],
-    rod: "Basic Rod"
-  };
-
+  function ensureUser(id) {
+  if (!db[id]) {
+    db[id] = {
+      coin: 0,
+      bank: 0,
+      xp: 0,
+      level: 1,
+      lastXp: 0,
+      lastWork: 0,
+      lastFish: 0,
+      lastTransfer: 0,
+      lastAbsen: null,
+      streak: 0,
+      dailyQuest: null,
+      fish: 0,
+      rareFish: 0,
+      legendFish: 0,
+      biggestFish: 0,
+      totalWork: 0,
+      totalChat: 0,
+      totalTransfer: 0,
+      totalEarned: 0,
+      inventory: [],
+      rod: "Basic Rod"
+    };
+  }
+}
   saveDB();
 }
 
@@ -666,74 +657,45 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   return msg.reply({ embeds: [embed] });
 }
 
-  if (cmd === 'addkoin') {
+ if (cmd === 'addkoin') {
 
   if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
-    return msg.reply('❌ Command ini khusus Admin.');
+    return msg.reply('❌ Admin only');
 
   const target = msg.mentions.users.first();
   const amt = parseInt(args[1]);
 
-  if (!target)
-    return msg.reply('❌ Tag user yang ingin ditambahkan koin.\nFormat: `.addkoin @user 100`');
+  if (!target || isNaN(amt) || amt <= 0)
+    return msg.reply('Format: `.addkoin @user 100`');
 
-  if (!amt || isNaN(amt))
-    return msg.reply('❌ Masukkan jumlah koin yang valid.\nFormat: `.addkoin @user 100`');
-
-  if (amt <= 0)
-    return msg.reply('❌ Jumlah harus lebih dari 0.');
-
-  if (target.bot)
-    return msg.reply('❌ Tidak bisa menambahkan koin ke bot.');
-  }
+  ensureUser(target.id);
 
   db[target.id].coin += amt;
   saveDB();
 
-  const embed = new EmbedBuilder()
-    .setColor(0xf1c40f)
-    .setTitle("🛠 ADMIN ACTION • ADD KOIN")
-    .setThumbnail(target.displayAvatarURL({ dynamic: true }))
-    .addFields(
-      { name: "👤 Target", value: `<@${target.id}>`, inline: true },
-      { name: "💰 Ditambahkan", value: koin(amt), inline: true },
-      { name: "📊 Saldo Sekarang", value: koin(db[target.id].coin), inline: true },
-      { name: "🛡 Admin", value: `<@${msg.author.id}>`, inline: false }
-    )
-    .setFooter({ text: "Sistem Ekonomi RPG • Admin Control" })
-    .setTimestamp();
-
-  return msg.reply({ embeds: [embed] });
+  return msg.reply(`🛠 Admin menambahkan ${koin(amt)} ke <@${target.id}>`);
 }
 
+if (cmd === 'addstreak') {
 
-  if (cmd === 'addstreak') {
-    if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
-      return msg.reply('❌ Admin only');
-    if (!db[target.id]) return msg.reply("User belum punya data.");
+  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
+    return msg.reply('❌ Admin only');
 
+  const target = msg.mentions.users.first();
+  const amt = parseInt(args[1]);
 
-    const target = msg.mentions.users.first();
-    const amt = parseInt(args[1]);
-    if (!target || isNaN(amt))
-      return msg.reply('>>addstreak @user 5');
+  if (!target || isNaN(amt))
+    return msg.reply('Format: `.addstreak @user 5`');
 
-    db[target.id].streak += amt;
-    saveDB();
+  ensureUser(target.id);
 
-    return msg.reply(`🔥 Streak ${target.username} +${amt}`);
-  }
+  db[target.id].streak += amt;
+  saveDB();
 
-});
+  return msg.reply(`🔥 Streak <@${target.id}> +${amt}`);
+}
+
+}); 
+
 
 client.login(process.env.TOKEN);
-
-
-
-
-
-
-
-
-
-
