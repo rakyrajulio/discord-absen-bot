@@ -12,6 +12,7 @@ const WORK_COOLDOWN = 30 * 60 * 1000;
 const XP_COOLDOWN = 60 * 1000;
 const FISH_COOLDOWN = 60 * 1000;
 const TAX_RATE = 0.05;
+const TRANSFER_COOLDOWN = 10 * 1000; 
 
 const client = new Client({
   intents: [
@@ -403,11 +404,10 @@ if (cmd === 'fish') {
 
   if (now - db[uid].lastFish < FISH_COOLDOWN) {
     const sisa = Math.ceil((FISH_COOLDOWN - (now - db[uid].lastFish)) / 1000);
-    return msg.reply(`⏳ Tunggu ${sisa} detik lagi.`);
+    return msg.reply(`⏳ Kail masih basah... tunggu ${sisa} detik.`);
   }
 
   db[uid].lastFish = now;
-
   
   const fishes = [
 
@@ -437,7 +437,7 @@ if (cmd === 'fish') {
 
 ];
 
-  let roll = Math.random() * 100;
+ let roll = Math.random() * 100;
   let cumulative = 0;
   let selected;
 
@@ -449,18 +449,25 @@ if (cmd === 'fish') {
     }
   }
 
+  if (!selected) selected = fishes[0];
+
   const size = Math.floor(Math.random() * (selected.max - selected.min + 1)) + selected.min;
   const reward = Math.floor(size / 2);
   const xpGain = selected.xp;
 
   db[uid].coin += reward;
   db[uid].xp += xpGain;
-  db[uid].fish += 1;
+  db[uid].fish++;
 
-  if (selected.rare) db[uid].rareFish += 1;
-  if (selected.legend) db[uid].legendFish += 1;
+  if (selected.tier === "Rare") db[uid].rareFish++;
+  if (selected.tier === "Legendary") db[uid].legendFish++;
 
-  
+  let newRecord = false;
+  if (!db[uid].biggestFish || size > db[uid].biggestFish) {
+    db[uid].biggestFish = size;
+    newRecord = true;
+  }
+
   while (db[uid].xp >= xpNeed(db[uid].level)) {
     db[uid].xp -= xpNeed(db[uid].level);
     db[uid].level++;
@@ -474,19 +481,30 @@ if (cmd === 'fish') {
 
   saveDB();
 
-  return msg.reply(
-`🎣 HASIL MANCING 🎣
+  let color = 0x2ecc71;
+  if (selected.tier === "Rare") color = 0x3498db;
+  if (selected.tier === "Legendary") color = 0xf1c40f;
 
-${selected.name}
-📏 Ukuran: ${size}cm
-💰 Koin: ${koin(reward)}
-⭐ XP: +${xpGain}
+  const embed = new EmbedBuilder()
+    .setColor(color)
+    .setTitle("🎣 STRIKE!!!")
+    .setDescription(`${selected.name}`)
+    .addFields(
+      { name: "📏 Ukuran", value: `${size} cm`, inline: true },
+      { name: "🏷 Tier", value: selected.tier, inline: true },
+      { name: "💰 Koin", value: koin(reward), inline: true },
+      { name: "⭐ XP", value: `+${xpGain}`, inline: true },
+      { name: "📦 Total Ikan", value: `${db[uid].fish}`, inline: true }
+    )
+    .setFooter({
+      text: newRecord
+        ? "🏆 REKOR BARU! Ikan terbesar kamu!"
+        : "Lempar kail lagi untuk hasil lebih besar!"
+    });
 
-📦 Total Ikan: ${db[uid].fish}
-${selected.rare ? "💎 RARE FISH!" : ""}
-${selected.legend ? "🐉 LEGENDARY FISH!!!" : ""}`
-  );
+  return msg.reply({ embeds: [embed] });
 }
+  
   if (cmd === 'transfer') {
 
   const target = msg.mentions.users.first();
@@ -504,28 +522,62 @@ ${selected.legend ? "🐉 LEGENDARY FISH!!!" : ""}`
   if (target.id === uid)
     return msg.reply('❌ Tidak bisa transfer ke diri sendiri.');
 
+  if (!db[target.id]) {
+    db[target.id] = {
+      coin: 0,
+      xp: 0,
+      level: 1,
+      lastXp: 0,
+      lastWork: 0,
+      lastAbsen: null,
+      streak: 0,
+      fish: 0,
+      rareFish: 0,
+      legendFish: 0,
+      lastFish: 0,
+      dailyQuest: null,
+      biggestFish: 0,
+      lastTransfer: 0
+    };
+  }
+
+  // Cooldown anti spam
+  if (!db[uid].lastTransfer) db[uid].lastTransfer = 0;
+
+  if (now - db[uid].lastTransfer < TRANSFER_COOLDOWN) {
+    const sisa = Math.ceil((TRANSFER_COOLDOWN - (now - db[uid].lastTransfer)) / 1000);
+    return msg.reply(`⏳ Tunggu ${sisa} detik sebelum transfer lagi.`);
+  }
+
   if (db[uid].coin < amt)
     return msg.reply('❌ Koin kamu tidak cukup.');
 
-  const tax = Math.floor(amt * TAX_RATE);
+  const taxRate = TAX_RATE || 0.05;
+  const tax = Math.floor(amt * taxRate);
   const receive = amt - tax;
 
   db[uid].coin -= amt;
   db[target.id].coin += receive;
+  db[uid].lastTransfer = now;
 
   saveDB();
 
   const embed = new EmbedBuilder()
-    .setColor(0x00ffcc)
-    .setTitle("🔁 TRANSFER BERHASIL")
+    .setColor(0x2ecc71)
+    .setTitle("💸 TRANSAKSI BERHASIL")
+    .setThumbnail(target.displayAvatarURL())
     .addFields(
-      { name: "👤 Pengirim", value: msg.author.username, inline: true },
-      { name: "📥 Penerima", value: target.username, inline: true },
-      { name: "💰 Dikirim", value: koin(amt), inline: true },
+      { name: "👤 Dari", value: `${msg.author.username}`, inline: true },
+      { name: "📥 Ke", value: `${target.username}`, inline: true },
+      { name: "━━━━━━━━━━━━━━", value: " ", inline: false },
+      { name: "💰 Jumlah", value: koin(amt), inline: true },
       { name: "💸 Pajak (5%)", value: koin(tax), inline: true },
-      { name: "✅ Diterima", value: koin(receive), inline: true }
+      { name: "✅ Diterima", value: koin(receive), inline: true },
+      { name: "━━━━━━━━━━━━━━", value: " ", inline: false },
+      { name: "💎 Sisa Saldo", value: koin(db[uid].coin), inline: false }
     )
-    .setFooter({ text: "💎 Sistem ekonomi aktif • Pajak menjaga keseimbangan" });
+    .setFooter({ text: "Sistem Ekonomi RPG • Pajak menjaga stabilitas pasar" })
+    .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
@@ -665,22 +717,60 @@ ${selected.legend ? "🐉 LEGENDARY FISH!!!" : ""}`
 }
 
   if (cmd === 'addkoin') {
-    if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
-      return msg.reply('❌ Admin only');
 
-    const target = msg.mentions.users.first();
-    const amt = parseInt(args[1]);
-    if (!target || isNaN(amt))
-      return msg.reply('>>addkoin @user 100');
+  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
+    return msg.reply('❌ Command ini khusus Admin.');
 
-    if (!db[target.id])
-      db[target.id] = { coin: 0, xp: 0, level: 1, streak: 0 };
+  const target = msg.mentions.users.first();
+  const amt = parseInt(args[1]);
 
-    db[target.id].coin += amt;
-    saveDB();
+  if (!target || isNaN(amt))
+    return msg.reply('Format: `.addkoin @user 100`');
 
-    return msg.reply(`💰 ${koin(amt)} ditambahkan ke ${target.username}`);
+  if (amt <= 0)
+    return msg.reply('❌ Jumlah harus lebih dari 0.');
+
+  if (target.bot)
+    return msg.reply('❌ Tidak bisa menambahkan koin ke bot.');
+
+  // Auto create full data user
+  if (!db[target.id]) {
+    db[target.id] = {
+      coin: 0,
+      xp: 0,
+      level: 1,
+      lastXp: 0,
+      lastWork: 0,
+      lastAbsen: null,
+      streak: 0,
+      fish: 0,
+      rareFish: 0,
+      legendFish: 0,
+      lastFish: 0,
+      dailyQuest: null,
+      biggestFish: 0,
+      lastTransfer: 0
+    };
   }
+
+  db[target.id].coin += amt;
+  saveDB();
+
+  const embed = new EmbedBuilder()
+    .setColor(0xf1c40f)
+    .setTitle("🛠 ADMIN ACTION • ADD KOIN")
+    .setThumbnail(target.displayAvatarURL())
+    .addFields(
+      { name: "👤 Target", value: target.username, inline: true },
+      { name: "💰 Ditambahkan", value: koin(amt), inline: true },
+      { name: "📊 Saldo Sekarang", value: koin(db[target.id].coin), inline: true },
+      { name: "🛡 Admin", value: msg.author.username, inline: false }
+    )
+    .setFooter({ text: "Sistem Ekonomi RPG • Admin Control" })
+    .setTimestamp();
+
+  return msg.reply({ embeds: [embed] });
+}
 
   if (cmd === 'addstreak') {
     if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
@@ -700,6 +790,7 @@ ${selected.legend ? "🐉 LEGENDARY FISH!!!" : ""}`
 });
 
 client.login(process.env.TOKEN);
+
 
 
 
