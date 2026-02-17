@@ -136,8 +136,7 @@ client.on('messageCreate', async msg => {
 👤 >>profile
 🏆 >>top
 📊 >>toplevel
-👑 >>addkoin
-🔥 >>addstreak`
+`
     );
   }
 
@@ -404,3 +403,4 @@ client.on('messageCreate', async msg => {
 });
 
 client.login(process.env.TOKEN);
+
