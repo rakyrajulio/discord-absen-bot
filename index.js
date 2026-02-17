@@ -436,9 +436,6 @@ if (cmd === 'fish') {
 
 ];
 
-
-];
-
  let roll = Math.random() * 100;
   let cumulative = 0;
   let selected;
@@ -524,26 +521,6 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   if (target.id === uid)
     return msg.reply('❌ Tidak bisa transfer ke diri sendiri.');
 
-  if (!db[target.id]) {
-    db[target.id] = {
-      coin: 0,
-      xp: 0,
-      level: 1,
-      lastXp: 0,
-      lastWork: 0,
-      lastAbsen: null,
-      streak: 0,
-      fish: 0,
-      rareFish: 0,
-      legendFish: 0,
-      lastFish: 0,
-      dailyQuest: null,
-      biggestFish: 0,
-      lastTransfer: 0
-    };
-  }
-
-  // Cooldown anti spam
   if (!db[uid].lastTransfer) db[uid].lastTransfer = 0;
 
   if (now - db[uid].lastTransfer < TRANSFER_COOLDOWN) {
@@ -594,7 +571,7 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
 
   const totalPages = Math.ceil(sorted.length / perPage);
 
-  if (page < 1 || page > totalPages)
+ if (totalPages === 0) totalPages = 1;
     return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
 
   const start = (page - 1) * perPage;
@@ -658,7 +635,7 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
 
   const totalPages = Math.ceil(sorted.length / perPage);
 
-  if (page < 1 || page > totalPages)
+ if (totalPages === 0) totalPages = 1;
     return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
 
   const start = (page - 1) * perPage;
@@ -693,7 +670,7 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
 
   const totalPages = Math.ceil(sorted.length / perPage);
 
-  if (page < 1 || page > totalPages)
+  if (totalPages === 0) totalPages = 1;
     return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
 
   const start = (page - 1) * perPage;
@@ -735,26 +712,6 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   if (target.bot)
     return msg.reply('❌ Tidak bisa menambahkan koin ke bot.');
 
-  // Auto create full data user
-  if (!db[target.id]) {
-    db[target.id] = {
-      coin: 0,
-      xp: 0,
-      level: 1,
-      lastXp: 0,
-      lastWork: 0,
-      lastAbsen: null,
-      streak: 0,
-      fish: 0,
-      rareFish: 0,
-      legendFish: 0,
-      lastFish: 0,
-      dailyQuest: null,
-      biggestFish: 0,
-      lastTransfer: 0
-    };
-  }
-
   db[target.id].coin += amt;
   saveDB();
 
@@ -777,6 +734,8 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   if (cmd === 'addstreak') {
     if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return msg.reply('❌ Admin only');
+    if (!db[target.id]) return msg.reply("User belum punya data.");
+
 
     const target = msg.mentions.users.first();
     const amt = parseInt(args[1]);
@@ -792,6 +751,7 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
 });
 
 client.login(process.env.TOKEN);
+
 
 
 
