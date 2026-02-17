@@ -10,8 +10,9 @@ require('dotenv').config();
 const PREFIX = '>>';
 const WORK_COOLDOWN = 30 * 60 * 1000;
 const XP_COOLDOWN = 60 * 1000;
-const DUEL_COOLDOWN = 5 * 60 * 1000;
-const TAX_RATE = 0.05;
+const DUEL_COOLDOWN = 60 * 1000; 
+const TAX_RATE = 0.05; 
+const pendingDuels = {};
 
 let pendingDuels = {};
 
@@ -243,64 +244,107 @@ client.on('messageCreate', async msg => {
     );
   }
 
-  if (cmd === 'duel') {
+if (cmd === 'duel') {
 
-    const target = msg.mentions.users.first();
-    const amount = parseInt(args[1]);
+  const target = msg.mentions.users.first();
+  const amount = parseInt(args[1]);
+  const now = Date.now();
 
-    if (!target || isNaN(amount))
-      return msg.reply('>>duel @user 500');
+  if (!target || isNaN(amount) || amount <= 0)
+    return msg.reply('Format: >>duel @user 500');
 
-    if (db[uid].coin < amount)
-      return msg.reply('❌ Koin tidak cukup');
+  if (target.bot)
+    return msg.reply('❌ Tidak bisa duel dengan bot.');
 
-    if (Date.now() - db[uid].lastDuel < DUEL_COOLDOWN)
-      return msg.reply('⏳ Cooldown duel 5 menit');
+  if (target.id === uid)
+    return msg.reply('❌ Tidak bisa duel dengan diri sendiri.');
 
-    pendingDuels[target.id] = {
-      challenger: uid,
-      amount
-    };
+  if (!db[target.id])
+    return msg.reply('❌ Target belum pernah main.');
 
-    return msg.reply(`⚔ ${target.username}, ketik >>accept untuk duel ${koin(amount)}`);
+  if (db[uid].coin < amount)
+    return msg.reply('❌ Koin kamu tidak cukup.');
+
+  if (db[target.id].coin < amount)
+    return msg.reply('❌ Koin target tidak cukup.');
+
+  if (now - db[uid].lastDuel < DUEL_COOLDOWN) {
+    const sisa = Math.ceil((DUEL_COOLDOWN - (now - db[uid].lastDuel)) / 1000);
+    return msg.reply(`⏳ Cooldown duel ${sisa} detik lagi.`);
   }
 
-  if (cmd === 'accept') {
+  if (pendingDuels[target.id])
+    return msg.reply('❌ Target sudah punya duel pending.');
 
-    const duel = pendingDuels[uid];
-    if (!duel) return msg.reply('Tidak ada duel.');
+  pendingDuels[target.id] = {
+    challenger: uid,
+    amount: amount,
+    createdAt: now
+  };
 
-    const challenger = duel.challenger;
-    const amount = duel.amount;
+  return msg.reply(
+`⚔ ${target.username}, kamu ditantang duel!
 
-    if (db[uid].coin < amount)
-      return msg.reply('❌ Koin tidak cukup.');
+💰 Taruhan: ${koin(amount)}
+Ketik >>accept untuk menerima duel!`
+  );
+}
 
-    delete pendingDuels[uid];
+if (cmd === 'accept') {
 
-    const pot = amount * 2;
-    const tax = Math.floor(pot * TAX_RATE);
-    const reward = pot - tax;
+  const duel = pendingDuels[uid];
+  const now = Date.now();
 
-    const chance = 50 + (db[challenger].level - db[uid].level) * 2;
-    const finalChance = Math.max(30, Math.min(70, chance));
-    const roll = Math.random() * 100;
+  if (!duel)
+    return msg.reply('❌ Tidak ada duel untuk kamu.');
 
-    let winner = roll < finalChance ? challenger : uid;
-    let loser = winner === challenger ? uid : challenger;
+  const challenger = duel.challenger;
+  const amount = duel.amount;
 
-    db[winner].coin += reward;
-    db[loser].coin -= amount;
-    db[winner].lastDuel = now;
-    db[loser].lastDuel = now;
+  if (!db[challenger] || !db[uid])
+    return msg.reply('❌ Data tidak ditemukan.');
 
-    saveDB();
+  if (db[uid].coin < amount)
+    return msg.reply('❌ Koin kamu tidak cukup.');
 
-    const winUser = await client.users.fetch(winner);
+  if (db[challenger].coin < amount)
+    return msg.reply('❌ Koin penantang tidak cukup.');
 
-    return msg.reply(`🏆 ${winUser.username} menang!\n💰 ${koin(reward)}\n💸 Pajak: ${koin(tax)}`);
-  }
+  delete pendingDuels[uid];
 
+  const pot = amount * 2;
+  const tax = Math.floor(pot * TAX_RATE);
+  const reward = pot - tax;
+
+  const chance = 50 + (db[challenger].level - db[uid].level) * 2;
+  const finalChance = Math.max(30, Math.min(70, chance));
+  const roll = Math.random() * 100;
+
+  let winner = roll < finalChance ? challenger : uid;
+  let loser = winner === challenger ? uid : challenger;
+
+  db[winner].coin += reward;
+  db[loser].coin -= amount;
+
+  
+  db[winner].lastDuel = now;            
+  db[loser].lastDuel = now - 30000;     
+
+  saveDB();
+
+  const winUser = await client.users.fetch(winner);
+
+  return msg.reply(
+`⚔ DUEL RESULT ⚔
+
+🏆 ${winUser.username} MENANG!
+💰 Hadiah: ${koin(reward)}
+💸 Pajak: ${koin(tax)}
+
+🔥 Bisa duel lagi dalam 1 menit!`
+  );
+}
+  
   if (cmd === 'transfer') {
     const target = msg.mentions.users.first();
     const amt = parseInt(args[1]);
@@ -403,4 +447,5 @@ client.on('messageCreate', async msg => {
 });
 
 client.login(process.env.TOKEN);
+
 
