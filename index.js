@@ -199,7 +199,7 @@ client.on('messageCreate', async msg => {
       },
       {
         name: "👤 Profile & Rank",
-        value: "` .profile ` — Lihat profile\n` .top ` — Ranking koin\n` .toplevel ` — Ranking level",
+        value: "` .profile ` — Lihat profile\n` .top ` — Ranking koin",
         inline: false
       }
     )
@@ -567,11 +567,12 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   const perPage = 10;
 
   const sorted = Object.entries(db)
-    .sort((a, b) => (b[1].fish || 0) - (a[1].fish || 0));
+    .filter(u => u[1].fishxp && u[1].fishxp > 0)
+    .sort((a, b) => b[1].fishxp - a[1].fishxp);
 
-  const totalPages = Math.ceil(sorted.length / perPage);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
 
- if (totalPages === 0) totalPages = 1;
+  if (page < 1 || page > totalPages)
     return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
 
   const start = (page - 1) * perPage;
@@ -583,25 +584,30 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
 
   for (let i = 0; i < current.length; i++) {
     const rank = start + i + 1;
-    const user = await client.users.fetch(current[i][0]);
+    let medal = "";
 
-    desc += `**${rank}. ${user.username}**
-🎣 ${current[i][1].fish || 0} ikan
-💎 ${current[i][1].rareFish || 0}
-🐉 ${current[i][1].legendFish || 0}
+    if (rank === 1) medal = "🥇";
+    else if (rank === 2) medal = "🥈";
+    else if (rank === 3) medal = "🥉";
 
-`;
+    let username = "Unknown User";
+
+    try {
+      const user = await client.users.fetch(current[i][0]);
+      username = user.username;
+    } catch (e) {}
+
+    desc += `${medal} **${rank}. ${username}** — 🎣 ${current[i][1].fishxp} XP\n`;
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x00ccff)
+    .setColor(0x00bfff)
     .setTitle("🎣 TOP FISHERMAN SERVER")
-    .setDescription(desc || "Belum ada pemancing.")
+    .setDescription(desc || "Belum ada fisherman.")
     .setFooter({ text: `Halaman ${page} dari ${totalPages}` });
 
   return msg.reply({ embeds: [embed] });
 }
-
 
   if (cmd === 'profile') {
     const needed = xpNeed(db[uid].level);
@@ -633,9 +639,9 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   const sorted = Object.entries(db)
     .sort((a, b) => b[1].coin - a[1].coin);
 
-  const totalPages = Math.ceil(sorted.length / perPage);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
 
- if (totalPages === 0) totalPages = 1;
+  if (page < 1 || page > totalPages)
     return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
 
   const start = (page - 1) * perPage;
@@ -654,41 +660,6 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   const embed = new EmbedBuilder()
     .setColor(0xffd700)
     .setTitle("🏆 TOP KOIN SERVER")
-    .setDescription(desc || "Belum ada data.")
-    .setFooter({ text: `Halaman ${page} dari ${totalPages}` });
-
-  return msg.reply({ embeds: [embed] });
-}
-
-  if (cmd === 'toplevel') {
-
-  const page = parseInt(args[0]) || 1;
-  const perPage = 10;
-
-  const sorted = Object.entries(db)
-    .sort((a, b) => b[1].level - a[1].level);
-
-  const totalPages = Math.ceil(sorted.length / perPage);
-
-  if (totalPages === 0) totalPages = 1;
-    return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
-
-  const start = (page - 1) * perPage;
-  const end = start + perPage;
-
-  const current = sorted.slice(start, end);
-
-  let desc = "";
-
-  for (let i = 0; i < current.length; i++) {
-    const rank = start + i + 1;
-    const user = await client.users.fetch(current[i][0]);
-    desc += `**${rank}. ${user.username}** — Lv ${current[i][1].level}\n`;
-  }
-
-  const embed = new EmbedBuilder()
-    .setColor(0x5865F2)
-    .setTitle("🏆 TOP LEVEL SERVER")
     .setDescription(desc || "Belum ada data.")
     .setFooter({ text: `Halaman ${page} dari ${totalPages}` });
 
@@ -751,6 +722,7 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
 });
 
 client.login(process.env.TOKEN);
+
 
 
 
