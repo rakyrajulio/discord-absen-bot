@@ -89,30 +89,22 @@ function progressBar(current, max, size = 15) {
 
 function generateQuest() {
   const quests = [
-
-  
   { type: "chat", target: 10, reward: 80, text: "Kirim 10 pesan" },
   { type: "chat", target: 20, reward: 120, text: "Kirim 20 pesan" },
-
- 
   { type: "work", target: 2, reward: 90, text: "Kerja 2 kali" },
   { type: "work", target: 5, reward: 150, text: "Kerja 5 kali" },
-
- 
   { type: "xp", target: 150, reward: 100, text: "Dapatkan 150 XP" },
   { type: "xp", target: 300, reward: 180, text: "Dapatkan 300 XP" },
-
-  
   { type: "fish", target: 5, reward: 100, text: "Tangkap 5 ikan" },
   { type: "rareFish", target: 1, reward: 200, text: "Dapatkan 1 Rare Fish" },
-
-
   { type: "streak", target: 3, reward: 120, text: "Login 3 hari berturut" },
+  { type: "level", target: 1, reward: 150, text: "Naik 1 level" },
 
-  
-  { type: "level", target: 1, reward: 150, text: "Naik 1 level" }
-
+  { type: "epicFish", target: 1, reward: 300, text: "Dapatkan 1 Epic Fish" },
+  { type: "mythicFish", target: 1, reward: 500, text: "Dapatkan 1 Mythic Fish" },
+  { type: "legendFish", target: 1, reward: 800, text: "Dapatkan 1 Legend Fish" }
 ];
+
 
   return quests[Math.floor(Math.random() * quests.length)];
 }
@@ -689,7 +681,6 @@ function getSellPrice(fish) {
   return Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
 }
 
-
 if (cmd === 'sell') {
   ensureUser(uid);
 
@@ -701,11 +692,12 @@ if (cmd === 'sell') {
 
   const fish = userFish[fishIndex];
 
-  if (!sellableTiers.includes(fish.tier))
+  if (!sellableTiers.map(t => t.toLowerCase()).includes(fish.tier.toLowerCase()))
     return msg.reply(`❌ ${fish.name} (${fish.tier}) tidak bisa dijual!`);
 
   const price = getSellPrice(fish);
-  db[uid].coin = (db[uid].coin || 0) + price;
+
+  db[uid].coins = (db[uid].coins || 0) + price;
 
   userFish.splice(fishIndex, 1);
   db[uid].inventory = userFish;
@@ -721,7 +713,6 @@ if (cmd === 'sellall') {
   const userFish = db[uid].inventory || [];
   if (!userFish.length) return msg.reply("❌ Inventori kamu kosong!");
 
-  
   const tierFilter = args[0]?.toLowerCase();
   const tiersToSell = tierFilter
     ? sellableTiers.filter(t => t.toLowerCase() === tierFilter)
@@ -732,7 +723,7 @@ if (cmd === 'sellall') {
   const remainingFish = [];
 
   for (const fish of userFish) {
-    if (tiersToSell.includes(fish.tier)) {
+    if (tiersToSell.map(t => t.toLowerCase()).includes(fish.tier.toLowerCase())) {
       const price = getSellPrice(fish);
       totalCoin += price;
       soldFishList.push(`💰 ${fish.name} (${fish.tier}) → ${koin(price)}`);
@@ -744,7 +735,7 @@ if (cmd === 'sellall') {
   if (!soldFishList.length) return msg.reply("❌ Tidak ada ikan yang bisa dijual!");
 
   db[uid].inventory = remainingFish;
-  db[uid].coin = (db[uid].coin || 0) + totalCoin;
+  db[uid].coins = (db[uid].coins || 0) + totalCoin;
   saveDB();
 
   const fishSoldText = soldFishList.join("\n");
@@ -1002,8 +993,17 @@ if (cmd === 'buy') {
 if (cmd === 'inv' || cmd === 'inventory') {
   ensureUser(uid);
 
+  
   const rod = db[uid].rod || "Basic Rod";
   const bait = db[uid].bait || "Normal Bait";
+
+  const fish = db[uid].fish || 0;
+  const rareFish = db[uid].rareFish || 0;
+  const epicFish = db[uid].epicFish || 0;
+  const mythicFish = db[uid].mythicFish || 0;
+  const legendFish = db[uid].legendFish || 0;
+
+  const coins = db[uid].coins || 0;
 
   const embed = new EmbedBuilder()
     .setColor(0x00ff88)
@@ -1011,9 +1011,12 @@ if (cmd === 'inv' || cmd === 'inventory') {
     .addFields(
       { name: "🎣 Rod", value: rod, inline: true },
       { name: "🪱 Bait", value: bait, inline: true },
-      { name: "🐟 Total Ikan", value: `${db[uid].fish}`, inline: true },
-      { name: "💎 Rare Fish", value: `${db[uid].rareFish}`, inline: true },
-      { name: "🐉 Legendary Fish", value: `${db[uid].legendFish}`, inline: true }
+      { name: "💰 Coins", value: `${coins}`, inline: true },
+      { name: "🐟 Ikan Biasa", value: `${fish}`, inline: true },
+      { name: "💎 Rare Fish", value: `${rareFish}`, inline: true },
+      { name: "✨ Epic Fish", value: `${epicFish}`, inline: true },
+      { name: "🔱 Mythic Fish", value: `${mythicFish}`, inline: true },
+      { name: "🐉 Legendary Fish", value: `${legendFish}`, inline: true }
     )
     .setFooter({ text: "Tingkatkan rod & bait untuk hasil mancing lebih besar!" })
     .setTimestamp();
@@ -1023,24 +1026,22 @@ if (cmd === 'inv' || cmd === 'inventory') {
 
 if (cmd === 'addkoin') {
 
-
   if (!msg.guild)
     return msg.reply('❌ Command ini hanya bisa digunakan di server.');
-
 
   if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
     return msg.reply('❌ Hanya Admin yang bisa menggunakan command ini.');
 
   const target = msg.mentions.users.first();
-  const amt = Number(args[1]);
+  const amt = parseInt(args[1]);
 
   if (!target || !Number.isInteger(amt) || amt <= 0)
     return msg.reply('Format: `.addkoin @user 100`');
 
-  
   ensureUser(target.id);
 
-  db[target.id].coin += amt;
+  
+  db[target.id].coins = (db[target.id].coins || 0) + amt;
   saveDB();
 
   const embed = new EmbedBuilder()
@@ -1049,7 +1050,7 @@ if (cmd === 'addkoin') {
     .addFields(
       { name: "👤 Target", value: `<@${target.id}>`, inline: true },
       { name: "💰 Ditambahkan", value: koin(amt), inline: true },
-      { name: "💎 Saldo Sekarang", value: koin(db[target.id].coin), inline: false }
+      { name: "💎 Saldo Sekarang", value: koin(db[target.id].coins), inline: false }
     )
     .setFooter({ text: `Admin: ${msg.author.username}` })
     .setTimestamp();
@@ -1080,6 +1081,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
