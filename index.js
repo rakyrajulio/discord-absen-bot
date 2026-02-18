@@ -971,17 +971,18 @@ if (cmd === 'shop') {
 }
 
 if (cmd === 'buy') {
-  const itemName = args.join(' ');
-  const item = shopItems.find(i => i.name.toLowerCase() === itemName.toLowerCase());
-
-  if (!item) return msg.reply('❌ Item tidak ditemukan di shop.');
   ensureUser(uid);
 
- 
+  const itemName = args.join(' ');
+  if (!itemName) return msg.reply("❌ Sebutkan item yang ingin dibeli!");
+
+  const item = shopItems.find(i => i.name.toLowerCase() === itemName.toLowerCase());
+  if (!item) return msg.reply('❌ Item tidak ditemukan di shop.');
+
   db[uid].coin = db[uid].coin || 0;
 
   if (db[uid].coin < item.price)
-    return msg.reply(`❌ Koin kamu tidak cukup! Dibutuhkan: ${koin(item.price)}, Saldo: ${koin(db[uid].coin)}`);
+    return msg.reply(`❌ Koin kamu tidak cukup! Dibutuhkan: ${coin(item.price)}, Saldo: ${coin(db[uid].coin)}`);
 
   db[uid].coin -= item.price;
 
@@ -993,7 +994,7 @@ if (cmd === 'buy') {
 
   saveDB();
 
-  return msg.reply(`✅ Berhasil membeli **${item.name}**!\n💰 Sisa koin: ${koin(db[uid].coin)}`);
+  return msg.reply(`✅ Berhasil membeli **${item.name}**!\n💰 Sisa koin: ${coin(db[uid].coin)}`);
 }
 
 
@@ -1095,6 +1096,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
