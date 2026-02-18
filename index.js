@@ -1039,9 +1039,6 @@ if (cmd === 'inv') {
   return msg.reply({ embeds: [embed] });
 };
 
-client.on('messageCreate', async (msg) => {
-  const args = msg.content.split(' ');
-  const cmd = args[0].toLowerCase();
 
   if (cmd === '.addkoin') {
     if (!msg.guild) return msg.reply('❌ Command ini hanya bisa digunakan di server.');
@@ -1075,7 +1072,9 @@ client.on('messageCreate', async (msg) => {
 
     return msg.reply({ embeds: [embed] });
   }
+  
 });
 
 client.login(process.env.TOKEN);
+
 
