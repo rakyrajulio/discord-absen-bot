@@ -1039,49 +1039,43 @@ if (cmd === 'inv') {
   return msg.reply({ embeds: [embed] });
 };
 
-if (cmd === 'addkoin') {
+client.on('messageCreate', async (msg) => {
+  const args = msg.content.split(' ');
+  const cmd = args[0].toLowerCase();
 
-  
-  if (!msg.guild)
-    return msg.reply('❌ Command ini hanya bisa digunakan di server.');
+  if (cmd === '.addkoin') {
+    if (!msg.guild) return msg.reply('❌ Command ini hanya bisa digunakan di server.');
+    if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      return msg.reply('❌ Hanya Admin yang bisa menggunakan command ini.');
 
-  
-  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
-    return msg.reply('❌ Hanya Admin yang bisa menggunakan command ini.');
+    const target = msg.mentions.users.first();
+    const amt = parseInt(args[1]);
 
- 
-  const target = msg.mentions.users.first();
-  const amt = parseInt(args[1]);
+    if (!target || target.bot) return msg.reply('❌ Mention user yang valid (bukan bot).');
+    if (!Number.isInteger(amt) || amt <= 0) return msg.reply('❌ Format salah! Gunakan: `.addkoin @user 100`');
 
-  if (!target || target.bot)
-    return msg.reply('❌ Mohon mention user yang valid (bukan bot).');
+    
+    ensureUser(target.id);
 
-  if (!Number.isInteger(amt) || amt <= 0)
-    return msg.reply('❌ Format salah! Gunakan: `.addkoin @user 100`');
+    
+    db[target.id].coins = (db[target.id].coins || 0) + amt;
+    saveDB();
 
-  
-  ensureUser(target.id);
+   
+    const embed = new EmbedBuilder()
+      .setColor(0x2ecc71)
+      .setTitle("🛠 ADMIN ADD KOIN")
+      .addFields(
+        { name: "👤 Target", value: `<@${target.id}>`, inline: true },
+        { name: "💰 Ditambahkan", value: koin(amt), inline: true },
+        { name: "💎 Saldo Sekarang", value: koin(db[target.id].coins), inline: false }
+      )
+      .setFooter({ text: `Admin: ${msg.author.username}` })
+      .setTimestamp();
 
-  
-  db[target.id].coins = (db[target.id]?.coins || 0) + amt;
-  saveDB();
-
- 
-  const embed = new EmbedBuilder()
-    .setColor(0x2ecc71)
-    .setTitle("🛠 ADMIN ADD KOIN")
-    .addFields(
-      { name: "👤 Target", value: `<@${target.id}>`, inline: true },
-      { name: "💰 Ditambahkan", value: koin(amt), inline: true },
-      { name: "💎 Saldo Sekarang", value: koin(db[target.id].coins), inline: false }
-    )
-    .setFooter({ text: `Admin: ${msg.author.username}` })
-    .setTimestamp();
-
-  return msg.reply({ embeds: [embed] });
-}
-  
-}); 
-
+    return msg.reply({ embeds: [embed] });
+  }
+});
 
 client.login(process.env.TOKEN);
+
