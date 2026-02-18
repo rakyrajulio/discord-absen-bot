@@ -699,6 +699,7 @@ if (cmd === 'sell') {
 
   db[uid].coins = (db[uid].coins || 0) + price;
 
+  
   userFish.splice(fishIndex, 1);
   db[uid].inventory = userFish;
 
@@ -724,9 +725,10 @@ if (cmd === 'sellall') {
 
   for (const fish of userFish) {
     if (tiersToSell.map(t => t.toLowerCase()).includes(fish.tier.toLowerCase())) {
+     
       const price = getSellPrice(fish);
       totalCoin += price;
-      soldFishList.push(`💰 ${fish.name} (${fish.tier}) → ${koin(price)}`);
+      soldFishList.push(`- ${fish.name} (${fish.tier}) → ${koin(price)}`);
     } else {
       remainingFish.push(fish);
     }
@@ -741,6 +743,7 @@ if (cmd === 'sellall') {
   const fishSoldText = soldFishList.join("\n");
   return msg.reply(`✅ Semua ikan berhasil dijual!\n\n${fishSoldText}\n\n🏆 Total coin: ${koin(totalCoin)}`);
 }
+
 
   if (cmd === 'transfer') {
 
@@ -1081,6 +1084,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
