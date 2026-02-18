@@ -236,27 +236,27 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
     .addFields(
       {
         name: "🗓 Daily & Quest",
-        value: "• `absen` — Klaim reward harian\n• `quest` — Cek quest harian",
+        value: "• `.absen` — Klaim reward harian\n• `.quest` — Cek quest harian",
         inline: false
       },
       {
         name: "💰 Economy",
-        value: "• `kerja` — Cari koin\n• `transfer @user <jumlah>` — Kirim koin ke user lain",
+        value: "• `.kerja` — Cari koin\n• `.transfer @user <jumlah>` — Kirim koin ke user lain",
         inline: false
       },
       {
         name: "🎣 Fishing",
-        value: "• `fish` — Mancing ikan\n• `topfish` — Ranking pemancing\n• `shop` — Beli Rod & Bait\n• `buy <item>` — Membeli item\n• `inv` — Lihat inventory\n• `sellall [tier]` — Menjual semua ikan yang bisa dijual (opsional pilih tier: common/rare/epic/legendary/mythic/all)",
+        value: "• `.fish` — Mancing ikan\n• `.topfish` — Ranking pemancing\n• `.shop` — Beli Rod & Bait\n• `.buy <item>` — Membeli item\n• `.inv` — Lihat inventory\n• `.sellall [tier]` — Jual semua ikan (opsional pilih tier: common/rare/epic/legendary/mythic/all)",
         inline: false
       },
       {
         name: "👤 Profile & Rank",
-        value: "• `profile` — Lihat profile lengkap\n• `top` — Ranking koin server",
+        value: "• `.profile` — Lihat profile lengkap\n• `.top` — Ranking koin server",
         inline: false
       },
       {
         name: "⚙ Admin",
-        value: "• `addkoin @user <jumlah>` — Tambah koin user\n• `addstreak @user <jumlah>` — Tambah streak user",
+        value: "• `.addkoin @user <jumlah>` — Tambah koin user\n• `.addstreak @user <jumlah>` — Tambah streak user",
         inline: false
       }
     )
@@ -865,28 +865,25 @@ if (cmd === 'sellall') {
 
   const rod = db[uid].rod || "Basic Rod";
   const bait = db[uid].bait || "Normal Bait";
+  const coins = db[uid].coins || 0;
 
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
     .setAuthor({
       name: `${msg.author.username} • Profile`,
-      iconURL: msg.author.displayAvatarURL()
+      iconURL: msg.author.displayAvatarURL({ dynamic: true })
     })
     .setThumbnail(msg.author.displayAvatarURL({ dynamic: true }))
     .addFields(
       { name: '⭐ Level', value: `${db[uid].level}`, inline: true },
-      { name: '🪙 Koin', value: koin(db[uid].coin), inline: true },
-      { 
-        name: '📊 XP', 
-        value: `${progressBar(db[uid].xp, needed)}\n${db[uid].xp}/${needed}`, 
-        inline: false 
-      },
+      { name: '🪙 Coins', value: koin(coins), inline: true },
+      { name: '📊 XP', value: `${progressBar(db[uid].xp, needed)}\n${db[uid].xp}/${needed}`, inline: false },
       { name: '🔥 Streak', value: `${db[uid].streak || 0} hari`, inline: true },
       { name: '🎣 Rod', value: rod, inline: true },
       { name: '🪱 Bait', value: bait, inline: true },
       { name: '🐟 Total Fish', value: `${db[uid].fish || 0}`, inline: true },
       { name: '💎 Rare Fish', value: `${db[uid].rareFish || 0}`, inline: true },
-      { name: '🔥 Epic Fish', value: `${db[uid].epicFish || 0}`, inline: true },
+      { name: '✨ Epic Fish', value: `${db[uid].epicFish || 0}`, inline: true },
       { name: '👑 Legendary Fish', value: `${db[uid].legendFish || 0}`, inline: true },
       { name: '🌌 Mythic Fish', value: `${db[uid].mythicFish || 0}`, inline: true }
     )
@@ -1074,6 +1071,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
