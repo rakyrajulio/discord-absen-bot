@@ -8,7 +8,7 @@ const fs = require('fs');
 require('dotenv').config();
 
 const PREFIX = '.';
-const WORK_COOLDOWN = 5 * 60 * 1000;
+const WORK_COOLDOWN = 2 * 60 * 1000;
 const XP_COOLDOWN = 60 * 1000;
 const FISH_COOLDOWN = 30 * 1000;
 const TAX_RATE = 0.05;
@@ -819,6 +819,7 @@ if (cmd === 'sellall') {
   const page = parseInt(args[0]) || 1;
   const perPage = 10;
 
+ 
   const sorted = Object.entries(db)
     .filter(u => u[1].fish && u[1].fish > 0)
     .sort((a, b) => b[1].fish - a[1].fish);
@@ -843,7 +844,6 @@ if (cmd === 'sellall') {
     else if (rank === 3) medal = "🥉";
 
     let username = "Unknown User";
-
     try {
       const user = await client.users.fetch(current[i][0]);
       username = user.username;
@@ -851,11 +851,15 @@ if (cmd === 'sellall') {
 
     const fishCount = current[i][1].fish || 0;
     const rareCount = current[i][1].rareFish || 0;
+    const epicCount = current[i][1].epicFish || 0;      
     const legendCount = current[i][1].legendFish || 0;
+    const mythicCount = current[i][1].mythicFish || 0;  
 
     let fishInfo = `🎣 ${fishCount} ikan`;
     if (rareCount > 0) fishInfo += ` | 💎 ${rareCount} Rare`;
+    if (epicCount > 0) fishInfo += ` | 🔥 ${epicCount} Epic`;
     if (legendCount > 0) fishInfo += ` | 👑 ${legendCount} Legendary`;
+    if (mythicCount > 0) fishInfo += ` | 🌌 ${mythicCount} Mythic`;
 
     desc += `${medal} **${rank}. ${username}** — ${fishInfo}\n`;
   }
@@ -869,6 +873,7 @@ if (cmd === 'sellall') {
 
   return msg.reply({ embeds: [embed] });
 }
+
 
   if (cmd === 'profile') {
   ensureUser(uid);
@@ -893,12 +898,14 @@ if (cmd === 'sellall') {
         value: `${progressBar(db[uid].xp, needed)}\n${db[uid].xp}/${needed}`, 
         inline: false 
       },
-      { name: '🔥 Streak', value: `${db[uid].streak} hari`, inline: true },
+      { name: '🔥 Streak', value: `${db[uid].streak || 0} hari`, inline: true },
       { name: '🎣 Rod', value: rod, inline: true },
       { name: '🪱 Bait', value: bait, inline: true },
-      { name: '🐟 Total Fish', value: `${db[uid].fish}`, inline: true },
+      { name: '🐟 Total Fish', value: `${db[uid].fish || 0}`, inline: true },
       { name: '💎 Rare Fish', value: `${db[uid].rareFish || 0}`, inline: true },
-      { name: '👑 Legendary Fish', value: `${db[uid].legendFish || 0}`, inline: true }
+      { name: '🔥 Epic Fish', value: `${db[uid].epicFish || 0}`, inline: true },
+      { name: '👑 Legendary Fish', value: `${db[uid].legendFish || 0}`, inline: true },
+      { name: '🌌 Mythic Fish', value: `${db[uid].mythicFish || 0}`, inline: true }
     )
     .setFooter({ text: "🌊 Selamat memancing!" })
     .setTimestamp();
@@ -907,37 +914,48 @@ if (cmd === 'sellall') {
 }
 
 
-  if (cmd === 'top') {
 
+ if (cmd === 'top') {
   const page = parseInt(args[0]) || 1;
   const perPage = 10;
 
-  const sorted = Object.entries(db)
-    .sort((a, b) => b[1].coin - a[1].coin);
+  const sorted = Object.entries(db).sort((a, b) => b[1].coin - a[1].coin);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
-
   if (page < 1 || page > totalPages)
     return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
 
   const start = (page - 1) * perPage;
   const end = start + perPage;
-
   const current = sorted.slice(start, end);
 
   let desc = "";
 
   for (let i = 0; i < current.length; i++) {
     const rank = start + i + 1;
-    const user = await client.users.fetch(current[i][0]);
-    desc += `**${rank}. ${user.username}** — ${koin(current[i][1].coin)}\n`;
+    let medal = "";
+
+    if (rank === 1) medal = "🥇";
+    else if (rank === 2) medal = "🥈";
+    else if (rank === 3) medal = "🥉";
+
+    let username = "Unknown User";
+    try {
+      const user = await client.users.fetch(current[i][0]);
+      username = user.username;
+    } catch (e) {}
+
+    const coin = current[i][1].coin || 0;
+
+    desc += `${medal} **${rank}. ${username}** — 💰 ${koin(coin)}\n`;
   }
 
   const embed = new EmbedBuilder()
     .setColor(0xffd700)
     .setTitle("🏆 TOP KOIN SERVER")
     .setDescription(desc || "Belum ada data.")
-    .setFooter({ text: `Halaman ${page} dari ${totalPages}` });
+    .setFooter({ text: `Halaman ${page} dari ${totalPages}` })
+    .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
@@ -1062,6 +1080,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
