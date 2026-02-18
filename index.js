@@ -247,7 +247,7 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
       },
       {
         name: "🎣 Fishing",
-        value: "• `.fish` — Mancing ikan\n• `.topfish` — Ranking pemancing\n• `.shop` — Beli Rod & Bait\n• `.buy <item>` — Membeli item\n• `.inv` — Lihat inventory\n• `.sellall [tier]` — Jual semua ikan (opsional pilih tier: common/rare/epic/legendary/mythic/all)",
+        value: "• `.fish` — Mancing ikan\n• `.topfish` — Ranking pemancing\n• `.shop` — Beli Rod & Bait\n• `.buy <item>` — Membeli item\n• `.inv` — Lihat inventory\n• `.sellall [tier]` — Jual ikan (common/rare/epic/legendary/mythic/all)",
         inline: false
       },
       {
@@ -257,7 +257,7 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
       },
       {
         name: "⚙ Admin",
-        value: "• `.addkoin @user <jumlah>` — Tambah coin user\n• `.addstreak @user <jumlah>` — Tambah streak user",
+        value: "• `.addcoin @user <jumlah>` — Tambah coin ke user",
         inline: false
       }
     )
@@ -310,6 +310,33 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
     .setFooter({ text: "Login tiap hari untuk bonus lebih besar!" });
 
   return msg.reply({ embeds: [embed] });
+}
+
+  if (cmd === 'addcoin') {
+
+  // ✅ Hanya admin
+  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
+    return msg.reply("❌ Kamu tidak punya izin menggunakan command ini!");
+
+  const target = msg.mentions.users.first();
+  const amount = parseInt(args[1]);
+
+  // ✅ Validasi input
+  if (!target || isNaN(amount))
+    return msg.reply("Format: `.addcoin @user jumlah`");
+
+  if (amount <= 0)
+    return msg.reply("❌ Jumlah coin harus lebih dari 0!");
+
+  ensureUser(target.id);
+
+  db[target.id].coin = (db[target.id].coin || 0) + amount;
+
+  saveDB();
+
+  return msg.reply(
+    `✅ Berhasil menambahkan ${amount.toLocaleString('id-ID')} 🪙 ke ${target.username}\n💰 Total coin sekarang: ${db[target.id].coin.toLocaleString('id-ID')} 🪙`
+  );
 }
 
   if (cmd === 'kerja') {
@@ -1022,6 +1049,7 @@ if (cmd === 'inv') {
   }); 
 
 client.login(process.env.TOKEN);
+
 
 
 
