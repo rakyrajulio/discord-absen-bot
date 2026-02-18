@@ -1039,54 +1039,75 @@ if (cmd === 'inv') {
   return msg.reply({ embeds: [embed] });
 };
 
- if (cmd === 'addkoin') {
-  if (!msg.guild) 
-    return msg.reply('❌ Command ini hanya bisa digunakan di server.');
-
-  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator)) 
-    return msg.reply('❌ Hanya Admin yang bisa menggunakan command ini.');
+ // ===== Command: .addkoin =====
+if (cmd === 'addkoin') {
+  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
+    return msg.reply('❌ Kamu tidak punya akses admin.');
 
   const target = msg.mentions.users.first();
-  const amt = parseInt(args[1]);
+  const amount = Number(args[1]);
 
-  if (!target || !Number.isInteger(amt) || amt <= 0) 
-    return msg.reply('Format: .addkoin @user 100');
+  if (!target || !Number.isInteger(amount))
+    return msg.reply('Format: `.addkoin @user 500`');
+
+  if (amount <= 0)
+    return msg.reply('❌ Jumlah harus lebih dari 0.');
 
   ensureUser(target.id);
 
-  db[target.id].coins = (db[target.id].coins || 0) + amt;
+  db[target.id].coin = (db[target.id].coin || 0) + amount;
   saveDB();
 
-  const embed = new EmbedBuilder()
-    .setColor(0x2ecc71)
-    .setTitle("🛠 ADMIN ADD KOIN")
-    .addFields(
-      { name: "👤 Target", value: `<@${target.id}>`, inline: true },
-      { name: "💰 Ditambahkan", value: coin(amt), inline: true },
-      { name: "💎 Saldo Sekarang", value: coin(db[target.id].coins), inline: false }
-    )
-    .setFooter({ text: `Admin: ${msg.author.username}` })
-    .setTimestamp();
-
-  return msg.reply({ embeds: [embed] });
+  return msg.reply({
+    embeds: [
+      new EmbedBuilder()
+        .setColor(0x2ecc71)
+        .setTitle('💰 COIN DITAMBAHKAN')
+        .addFields(
+          { name: '👤 Target', value: `<@${target.id}>`, inline: true },
+          { name: '💵 Jumlah', value: `${amount.toLocaleString('id-ID')} 🪙`, inline: true },
+          { name: '💎 Saldo Sekarang', value: `${db[target.id].coin.toLocaleString('id-ID')} 🪙`, inline: true }
+        )
+        .setFooter({ text: `Admin: ${msg.author.username}` })
+        .setTimestamp()
+    ]
+  });
 }
 
+// ===== Command: .addstreak =====
 if (cmd === 'addstreak') {
-  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator)) 
-    return msg.reply('❌ Admin only');
+  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
+    return msg.reply('❌ Kamu tidak punya akses admin.');
 
   const target = msg.mentions.users.first();
-  const amt = parseInt(args[1]);
+  const amount = Number(args[1]);
 
-  if (!target || isNaN(amt)) 
-    return msg.reply('Format: .addstreak @user 5');
+  if (!target || !Number.isInteger(amount))
+    return msg.reply('Format: `.addstreak @user 3`');
+
+  if (amount <= 0)
+    return msg.reply('❌ Jumlah harus lebih dari 0.');
 
   ensureUser(target.id);
 
-  db[target.id].streak = (db[target.id].streak || 0) + amt;
+  db[target.id].streak = (db[target.id].streak || 0) + amount;
   saveDB();
 
-  return msg.reply(`🔥 Streak <@${target.id}> +${amt}`);
+  return msg.reply({
+    embeds: [
+      new EmbedBuilder()
+        .setColor(0xffcc00)
+        .setTitle('🔥 STREAK DITAMBAHKAN')
+        .addFields(
+          { name: '👤 Target', value: `<@${target.id}>`, inline: true },
+          { name: '🔥 Tambah Streak', value: `${amount} hari`, inline: true },
+          { name: '🔥 Streak Sekarang', value: `${db[target.id].streak} hari`, inline: true }
+        )
+        .setFooter({ text: `Admin: ${msg.author.username}` })
+        .setTimestamp()
+    ]
+  });
 }
 
 client.login(process.env.TOKEN);
+
