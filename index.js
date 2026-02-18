@@ -109,9 +109,10 @@ function generateQuest() {
   return quests[Math.floor(Math.random() * quests.length)];
 }
 
-client.once('clientReady', () => {
+client.once('ready', () => {
   console.log('🤖 Economy RPG Bot ONLINE');
 });
+
 
 client.on('messageCreate', async msg => {
   if (msg.author.bot) return;
@@ -802,65 +803,42 @@ if (cmd === 'sellall') {
   return msg.reply({ embeds: [embed] });
 }
 
+if (cmd === 'topfish') {
+  ensureUser(uid);
 
- if (cmd === 'topfish') {
-  const page = parseInt(args[0]) || 1;
-  const perPage = 10;
+  const sortBy = args[0]?.toLowerCase() || 'total';
+  const users = Object.entries(db)
+    .filter(([id, data]) => !isNaN(data.fish))
+    .map(([id, data]) => ({
+      id,
+      username: msg.guild.members.cache.get(id)?.user.username || 'Unknown',
+      totalFish: data.fish || 0,
+      rareFish: data.rareFish || 0,
+      legendFish: data.legendFish || 0
+    }));
 
- 
-  const sorted = Object.entries(db)
-    .filter(u => u[1].fish && u[1].fish > 0)
-    .sort((a, b) => b[1].fish - a[1].fish);
+  let sorted;
+  if (sortBy === 'rare') sorted = users.sort((a, b) => b.rareFish - a.rareFish);
+  else if (sortBy === 'legend') sorted = users.sort((a, b) => b.legendFish - a.legendFish);
+  else sorted = users.sort((a, b) => b.totalFish - a.totalFish);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
-
-  if (page < 1 || page > totalPages)
-    return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
-
-  const start = (page - 1) * perPage;
-  const end = start + perPage;
-  const current = sorted.slice(start, end);
-
-  let desc = "";
-
-  for (let i = 0; i < current.length; i++) {
-    const rank = start + i + 1;
-    let medal = "";
-
-    if (rank === 1) medal = "🥇";
-    else if (rank === 2) medal = "🥈";
-    else if (rank === 3) medal = "🥉";
-
-    let username = "Unknown User";
-    try {
-      const user = await client.users.fetch(current[i][0]);
-      username = user.username;
-    } catch (e) {}
-
-    const fishCount = current[i][1].fish || 0;
-    const rareCount = current[i][1].rareFish || 0;
-    const epicCount = current[i][1].epicFish || 0;      
-    const legendCount = current[i][1].legendFish || 0;
-    const mythicCount = current[i][1].mythicFish || 0;  
-
-    let fishInfo = `🎣 ${fishCount} ikan`;
-    if (rareCount > 0) fishInfo += ` | 💎 ${rareCount} Rare`;
-    if (epicCount > 0) fishInfo += ` | 🔥 ${epicCount} Epic`;
-    if (legendCount > 0) fishInfo += ` | 👑 ${legendCount} Legendary`;
-    if (mythicCount > 0) fishInfo += ` | 🌌 ${mythicCount} Mythic`;
-
-    desc += `${medal} **${rank}. ${username}** — ${fishInfo}\n`;
-  }
+  const top10 = sorted.slice(0, 10);
+  if (!top10.length) return msg.reply('❌ Tidak ada data pemancing.');
 
   const embed = new EmbedBuilder()
     .setColor(0x1abc9c)
-    .setTitle("🎣 TOP FISHERMAN SERVER")
-    .setDescription(desc || "Belum ada fisherman.")
-    .setFooter({ text: `Halaman ${page} dari ${totalPages}` })
+    .setTitle(`🏆 TOP FISH • Sorted by ${sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}`)
+    .setDescription(
+      top10.map((u, i) => 
+        `**${i + 1}. ${u.username}** — Total: ${u.totalFish} | Rare: ${u.rareFish} | Legendary: ${u.legendFish}`
+      ).join('\n')
+    )
+    .setFooter({ text: "🎣 Bersainglah menjadi pemancing terbaik!" })
     .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
+
 
 
 if (cmd === 'profile') {
@@ -1004,15 +982,14 @@ if (cmd === 'inv') {
   const userData = db[uid];
   const rod = userData.rod || "Basic Rod";
   const bait = userData.bait || "Normal Bait";
-  const coins = userData.coin || 0; 
+  const coins = userData.coin || 0;
   const userFish = userData.inventory || [];
 
- 
   const counts = { Common: 0, Rare: 0, Epic: 0, Legendary: 0, Mythic: 0 };
+
   for (const fish of userFish) {
-    if (fish.tier) {
-      const fishTier = fish.tier.charAt(0).toUpperCase() + fish.tier.slice(1).toLowerCase();
-      if (counts[fishTier] !== undefined) counts[fishTier]++;
+    if (fish.tier && counts[fish.tier] !== undefined) {
+      counts[fish.tier]++;
     }
   }
 
@@ -1026,7 +1003,7 @@ if (cmd === 'inv') {
     .addFields(
       { name: "🎣 Rod", value: rod, inline: true },
       { name: "🪱 Bait", value: bait, inline: true },
-      { name: "💰 Coins", value: coin(coins), inline: true },
+      { name: "💰 Coins", value: `${coins.toLocaleString('id-ID')} 🪙`, inline: true },
       { name: "🐟 Common Fish", value: `${counts.Common}`, inline: true },
       { name: "💎 Rare Fish", value: `${counts.Rare}`, inline: true },
       { name: "✨ Epic Fish", value: `${counts.Epic}`, inline: true },
@@ -1037,77 +1014,9 @@ if (cmd === 'inv') {
     .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
-};
-
-// ===== ADMIN COMMANDS =====
-if (cmd === 'addkoin') {
-  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
-    return msg.reply('❌ Kamu tidak punya akses admin.');
-
-  const target = msg.mentions.users.first();
-  const amount = Number(args[1]);
-
-  if (!target || !Number.isInteger(amount))
-    return msg.reply('Format: `.addkoin @user 500`');
-
-  if (amount <= 0)
-    return msg.reply('❌ Jumlah harus lebih dari 0.');
-
-  ensureUser(target.id);
-
-  db[target.id].coin = (db[target.id].coin || 0) + amount;
-  saveDB();
-
-  return msg.reply({
-    embeds: [
-      new EmbedBuilder()
-        .setColor(0x2ecc71)
-        .setTitle('💰 COIN DITAMBAHKAN')
-        .addFields(
-          { name: '👤 Target', value: `<@${target.id}>`, inline: true },
-          { name: '💵 Jumlah', value: `${amount.toLocaleString('id-ID')} 🪙`, inline: true },
-          { name: '💎 Saldo Sekarang', value: `${db[target.id].coin.toLocaleString('id-ID')} 🪙`, inline: true }
-        )
-        .setFooter({ text: `Admin: ${msg.author.username}` })
-        .setTimestamp()
-    ]
-  });
 }
 
-if (cmd === 'addstreak') {
-  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
-    return msg.reply('❌ Kamu tidak punya akses admin.');
-
-  const target = msg.mentions.users.first();
-  const amount = Number(args[1]);
-
-  if (!target || !Number.isInteger(amount))
-    return msg.reply('Format: `.addstreak @user 3`');
-
-  if (amount <= 0)
-    return msg.reply('❌ Jumlah harus lebih dari 0.');
-
-  ensureUser(target.id);
-
-  db[target.id].streak = (db[target.id].streak || 0) + amount;
-  saveDB();
-
-  return msg.reply({
-    embeds: [
-      new EmbedBuilder()
-        .setColor(0xffcc00)
-        .setTitle('🔥 STREAK DITAMBAHKAN')
-        .addFields(
-          { name: '👤 Target', value: `<@${target.id}>`, inline: true },
-          { name: '🔥 Tambah Streak', value: `${amount} hari`, inline: true },
-          { name: '🔥 Streak Sekarang', value: `${db[target.id].streak} hari`, inline: true }
-        )
-        .setFooter({ text: `Admin: ${msg.author.username}` })
-        .setTimestamp()
-    ]
-  });
-
-
 client.login(process.env.TOKEN);
+
 
 
