@@ -679,7 +679,7 @@ if (cmd === 'fish') {
   const sellableTiers = ["Common", "Rare", "Epic"];
 
 function getSellPrice(fish) {
-  /
+  
   const min = Math.max(0, Math.floor(fish.min || 0));
   const max = Math.max(min, Math.floor(fish.max || min)); 
 
@@ -1075,6 +1075,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
