@@ -715,12 +715,16 @@ if (cmd === 'sellall') {
   const remainingFish = [];
 
   for (const fish of userFish) {
+    if (!fish.tier || !fish.size) continue;
+
     const fishTier = fish.tier.charAt(0).toUpperCase() + fish.tier.slice(1).toLowerCase();
+
     if (tiersToSell.includes(fishTier)) {
-      
       const price = Math.floor(fish.size / 2);
       totalCoin += price;
-      soldFishList.push(`- ${fish.name} (${fishTier}) → ${coin(price)}`);
+      soldFishList.push(
+        `- ${fish.name} (${fishTier}) → ${price.toLocaleString('id-ID')} 🪙`
+      );
     } else {
       remainingFish.push(fish);
     }
@@ -729,16 +733,15 @@ if (cmd === 'sellall') {
   if (!soldFishList.length) 
     return msg.reply("❌ Tidak ada ikan yang bisa dijual sesuai tier yang dipilih!");
 
-  
   userData.inventory = remainingFish;
   userData.coin = (userData.coin || 0) + totalCoin;
 
   saveDB();
 
-  return msg.reply(`✅ Semua ikan berhasil dijual!\n\n${soldFishList.join("\n")}\n\n🏆 Total coin diterima: ${coin(totalCoin)}`);
+  return msg.reply(
+    `✅ Semua ikan berhasil dijual!\n\n${soldFishList.join("\n")}\n\n🏆 Total coin diterima: ${totalCoin.toLocaleString('id-ID')} 🪙`
+  );
 }
-
-
 
   if (cmd === 'transfer') {
 
@@ -1016,7 +1019,10 @@ if (cmd === 'inv') {
   return msg.reply({ embeds: [embed] });
 }
 
+  }); 
+
 client.login(process.env.TOKEN);
+
 
 
 
