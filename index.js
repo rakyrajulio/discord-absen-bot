@@ -1039,7 +1039,7 @@ if (cmd === 'inv') {
   return msg.reply({ embeds: [embed] });
 };
 
- // ===== Command: .addkoin =====
+// ===== ADMIN COMMANDS =====
 if (cmd === 'addkoin') {
   if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
     return msg.reply('❌ Kamu tidak punya akses admin.');
@@ -1074,7 +1074,6 @@ if (cmd === 'addkoin') {
   });
 }
 
-// ===== Command: .addstreak =====
 if (cmd === 'addstreak') {
   if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
     return msg.reply('❌ Kamu tidak punya akses admin.');
@@ -1107,7 +1106,8 @@ if (cmd === 'addstreak') {
         .setTimestamp()
     ]
   });
-}
+
 
 client.login(process.env.TOKEN);
+
 
