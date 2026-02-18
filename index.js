@@ -23,6 +23,7 @@ const client = new Client({
 });
 
 const DB_FILE = './database.json';
+
 let db = fs.existsSync(DB_FILE)
   ? JSON.parse(fs.readFileSync(DB_FILE))
   : {};
@@ -106,10 +107,11 @@ client.on('messageCreate', async msg => {
       inventory: [],
       rod: "Basic Rod"
     };
+
+    saveDB();
   }
 }
-  saveDB();
-}
+
 
   const today = todayStr();
   if (!db[uid].dailyQuest || db[uid].dailyQuest.date !== today) {
@@ -122,40 +124,60 @@ client.on('messageCreate', async msg => {
     };
   }
 
-  if (now - db[uid].lastXp > XP_COOLDOWN) {
-    const gain = Math.floor(Math.random() * 10) + 5;
-    db[uid].xp += gain;
-    db[uid].lastXp = now;
+  
+ensureUser(uid);
 
-   if (db[uid].dailyQuest && !db[uid].dailyQuest.claimed) {
+if (!db[uid].lastXp)
+  db[uid].lastXp = 0;
 
-  if (db[uid].dailyQuest.type === "xp")
-    db[uid].dailyQuest.progress += gain;
+if (now - db[uid].lastXp > XP_COOLDOWN) {
 
-  if (db[uid].dailyQuest.type === "chat")
-    db[uid].dailyQuest.progress++;
+  const gain = Math.floor(Math.random() * 10) + 5;
 
-  if (db[uid].dailyQuest.progress > db[uid].dailyQuest.target)
-    db[uid].dailyQuest.progress = db[uid].dailyQuest.target;
-}
+  db[uid].xp += gain;
+  db[uid].lastXp = now;
 
-    while (db[uid].xp >= xpNeed(db[uid].level)) {
-      db[uid].xp -= xpNeed(db[uid].level);
-      db[uid].level++;
+  
+  const q = db[uid].dailyQuest;
 
-      const bonus = db[uid].level * 15;
-      db[uid].coin += bonus;
+  if (q && !q.claimed) {
 
-      const ch = msg.guild.channels.cache.get(process.env.LEVEL_CHANNEL_ID);
-      if (ch) {
-        ch.send(
-          `🎉 **${msg.author.username} LEVEL UP!**\n⭐ Level ${db[uid].level}\n🪙 Bonus: ${koin(bonus)}`
-        );
-      }
-    }
+    if (q.type === "xp")
+      q.progress = (q.progress || 0) + gain;
 
-    saveDB();
+    if (q.type === "chat")
+      q.progress = (q.progress || 0) + 1;
+
+    if (q.progress > q.target)
+      q.progress = q.target;
   }
+
+  
+  let leveledUp = false;
+
+  while (true) {
+    const need = xpNeed(db[uid].level);
+    if (db[uid].xp < need) break;
+
+    db[uid].xp -= need;
+    db[uid].level++;
+    leveledUp = true;
+
+    const bonus = db[uid].level * 15;
+    db[uid].coin += bonus;
+
+    const chId = process.env.LEVEL_CHANNEL_ID;
+    const ch = msg.guild?.channels?.cache?.get(chId);
+
+    if (ch) {
+      ch.send(
+        `🎉 **${msg.author.username} LEVEL UP!**\n⭐ Level ${db[uid].level}\n🪙 Bonus: ${koin(bonus)}`
+      );
+    }
+  }
+
+  saveDB();
+}
 
   if (!msg.content.startsWith(PREFIX)) return;
 
@@ -206,7 +228,7 @@ client.on('messageCreate', async msg => {
   if (db[uid].lastAbsen === today)
     return msg.reply('❌ Kamu sudah absen hari ini.');
 
-  // 🔥 Streak reset kalau bolong
+  
   if (db[uid].lastAbsen) {
     const yesterday = new Date(Date.now() - 86400000)
       .toISOString()
@@ -341,12 +363,18 @@ const job = jobs[Math.floor(Math.random() * jobs.length)];
   return msg.reply({ embeds: [embed] });
 }
 
-  if (cmd === 'quest') {
+ if (cmd === 'quest') {
+
+  ensureUser(uid);
 
   const q = db[uid].dailyQuest;
 
   if (!q)
     return msg.reply("❌ Quest belum tersedia.");
+
+
+  q.progress = q.progress || 0;
+  q.target = q.target || 1;
 
   const percent = Math.min(q.progress / q.target, 1);
   const barSize = 15;
@@ -354,10 +382,12 @@ const job = jobs[Math.floor(Math.random() * jobs.length)];
   const empty = barSize - filled;
   const bar = '▰'.repeat(filled) + '▱'.repeat(empty);
 
-  
+
   if (q.progress >= q.target && !q.claimed) {
+
     db[uid].coin += q.reward;
     q.claimed = true;
+
     saveDB();
 
     return msg.reply({
@@ -365,15 +395,21 @@ const job = jobs[Math.floor(Math.random() * jobs.length)];
         new EmbedBuilder()
           .setColor(0x00ff88)
           .setTitle("🎉 QUEST SELESAI!")
-          .setDescription(`Kamu berhasil menyelesaikan quest hari ini!`)
+          .setDescription("Kamu berhasil menyelesaikan quest hari ini!")
           .addFields(
+            { name: "📌 Quest", value: q.text, inline: false },
             { name: "🎁 Reward", value: koin(q.reward), inline: true },
-            { name: "📌 Quest", value: q.text, inline: false }
+            { name: "💎 Saldo Sekarang", value: koin(db[uid].coin), inline: true }
           )
           .setFooter({ text: "🔥 Kerja bagus! Besok ada quest baru!" })
+          .setTimestamp()
       ]
     });
   }
+
+  let statusText = "⏳ Belum selesai";
+  if (q.claimed) statusText = "✅ Sudah diklaim";
+  else if (q.progress >= q.target) statusText = "🎁 Siap diklaim";
 
   return msg.reply({
     embeds: [
@@ -384,14 +420,23 @@ const job = jobs[Math.floor(Math.random() * jobs.length)];
           { name: "📌 Misi", value: q.text, inline: false },
           { name: "📊 Progress", value: `${bar}\n${q.progress}/${q.target}`, inline: false },
           { name: "🎁 Reward", value: koin(q.reward), inline: true },
-          { name: "📅 Status", value: q.claimed ? "✅ Sudah diklaim" : "⏳ Belum selesai", inline: true }
+          { name: "📅 Status", value: statusText, inline: true }
         )
         .setFooter({ text: "Selesaikan sebelum reset harian!" })
+        .setTimestamp()
     ]
   });
 }
 
 if (cmd === 'fish') {
+
+  if (!msg.guild)
+    return msg.reply('❌ Command ini hanya bisa digunakan di server.');
+
+  ensureUser(uid);
+
+  if (!db[uid].lastFish)
+    db[uid].lastFish = 0;
 
   if (now - db[uid].lastFish < FISH_COOLDOWN) {
     const sisa = Math.ceil((FISH_COOLDOWN - (now - db[uid].lastFish)) / 1000);
@@ -399,37 +444,36 @@ if (cmd === 'fish') {
   }
 
   db[uid].lastFish = now;
-  
+
   const fishes = [
+    { name: "🐟 Ikan Lele", chance: 15, min: 20, max: 40, xp: 15, tier: "Common" },
+    { name: "🐠 Ikan Nila", chance: 15, min: 25, max: 45, xp: 18, tier: "Common" },
+    { name: "🐡 Ikan Buntal", chance: 12, min: 30, max: 50, xp: 20, tier: "Common" },
+    { name: "🦐 Udang Sungai", chance: 10, min: 15, max: 35, xp: 12, tier: "Common" },
+    { name: "🦀 Kepiting", chance: 8, min: 20, max: 40, xp: 18, tier: "Common" },
 
+    { name: "🐬 Lumba-Lumba Kecil", chance: 6, min: 60, max: 100, xp: 40, tier: "Rare" },
+    { name: "🦈 Hiu Karang", chance: 5, min: 70, max: 120, xp: 55, tier: "Rare" },
+    { name: "🐙 Gurita Laut", chance: 6, min: 50, max: 90, xp: 35, tier: "Rare" },
+    { name: "🐢 Penyu Laut", chance: 5, min: 60, max: 110, xp: 45, tier: "Rare" },
 
-  { name: "🐟 Ikan Lele", chance: 15, min: 20, max: 40, xp: 15, tier: "Common" },
-  { name: "🐠 Ikan Nila", chance: 15, min: 25, max: 45, xp: 18, tier: "Common" },
-  { name: "🐡 Ikan Buntal", chance: 12, min: 30, max: 50, xp: 20, tier: "Common" },
-  { name: "🦐 Udang Sungai", chance: 10, min: 15, max: 35, xp: 12, tier: "Common" },
-  { name: "🦀 Kepiting", chance: 8, min: 20, max: 40, xp: 18, tier: "Common" },
+    { name: "💎 Golden Fish", chance: 3, min: 120, max: 180, xp: 80, tier: "Rare" },
+    { name: "🔥 Lava Fish", chance: 2, min: 130, max: 190, xp: 90, tier: "Rare" },
+    { name: "❄ Ice Fish", chance: 2, min: 120, max: 170, xp: 85, tier: "Rare" },
+    { name: "⚡ Thunder Fish", chance: 1, min: 150, max: 220, xp: 100, tier: "Rare" },
 
-  { name: "🐬 Lumba-Lumba Kecil", chance: 6, min: 60, max: 100, xp: 40, tier: "Rare" },
-  { name: "🦈 Hiu Karang", chance: 5, min: 70, max: 120, xp: 55, tier: "Rare" },
-  { name: "🐙 Gurita Laut", chance: 6, min: 50, max: 90, xp: 35, tier: "Rare" },
-  { name: "🐢 Penyu Laut", chance: 5, min: 60, max: 110, xp: 45, tier: "Rare" },
+    { name: "🌊 Kraken Muda", chance: 1.5, min: 200, max: 300, xp: 130, tier: "Legendary" },
+    { name: "🌟 Celestial Carp", chance: 1, min: 220, max: 320, xp: 150, tier: "Legendary" },
+    { name: "🌈 Rainbow Dragonfish", chance: 0.5, min: 250, max: 350, xp: 180, tier: "Legendary" },
+    { name: "🐉 Ancient Dragon Fish", chance: 0.5, min: 300, max: 450, xp: 250, tier: "Legendary" },
+    { name: "👑 King of The Ocean", chance: 0.5, min: 350, max: 500, xp: 300, tier: "Legendary" }
+  ];
 
-  { name: "💎 Golden Fish", chance: 3, min: 120, max: 180, xp: 80, tier: "Rare" },
-  { name: "🔥 Lava Fish", chance: 2, min: 130, max: 190, xp: 90, tier: "Rare" },
-  { name: "❄ Ice Fish", chance: 2, min: 120, max: 170, xp: 85, tier: "Rare" },
-  { name: "⚡ Thunder Fish", chance: 1, min: 150, max: 220, xp: 100, tier: "Rare" },
-    
-  { name: "🌊 Kraken Muda", chance: 1.5, min: 200, max: 300, xp: 130, tier: "Legendary" },
-  { name: "🌟 Celestial Carp", chance: 1, min: 220, max: 320, xp: 150, tier: "Legendary" },
-  { name: "🌈 Rainbow Dragonfish", chance: 0.5, min: 250, max: 350, xp: 180, tier: "Legendary" },
-  { name: "🐉 Ancient Dragon Fish", chance: 0.5, min: 300, max: 450, xp: 250, tier: "Legendary" },
-  { name: "👑 King of The Ocean", chance: 0.5, min: 350, max: 500, xp: 300, tier: "Legendary" }
-
-];
-
- let roll = Math.random() * 100;
+  
+  const totalChance = fishes.reduce((sum, f) => sum + f.chance, 0);
+  let roll = Math.random() * totalChance;
   let cumulative = 0;
-  let selected;
+  let selected = fishes[0];
 
   for (let fish of fishes) {
     cumulative += fish.chance;
@@ -439,18 +483,30 @@ if (cmd === 'fish') {
     }
   }
 
-  if (!selected) selected = fishes[0];
-
   const size = Math.floor(Math.random() * (selected.max - selected.min + 1)) + selected.min;
   const reward = Math.floor(size / 2);
   const xpGain = selected.xp;
 
   db[uid].coin += reward;
   db[uid].xp += xpGain;
-  db[uid].fish++;
+  db[uid].fish = (db[uid].fish || 0) + 1;
 
-  if (selected.tier === "Rare") db[uid].rareFish++;
-if (selected.tier === "Legendary") db[uid].legendFish++;
+  if (selected.tier === "Rare")
+    db[uid].rareFish = (db[uid].rareFish || 0) + 1;
+
+  if (selected.tier === "Legendary")
+    db[uid].legendFish = (db[uid].legendFish || 0) + 1;
+
+  
+  if (db[uid].dailyQuest) {
+    const q = db[uid].dailyQuest;
+
+    if (q.type === "fish") q.progress++;
+    if (q.type === "rareFish" && selected.tier === "Rare") q.progress++;
+
+    if (q.progress > q.target)
+      q.progress = q.target;
+  }
 
   let newRecord = false;
   if (!db[uid].biggestFish || size > db[uid].biggestFish) {
@@ -458,8 +514,10 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
     newRecord = true;
   }
 
+ 
   while (db[uid].xp >= xpNeed(db[uid].level)) {
-    db[uid].xp -= xpNeed(db[uid].level);
+    const need = xpNeed(db[uid].level);
+    db[uid].xp -= need;
     db[uid].level++;
     const bonus = db[uid].level * 15;
     db[uid].coin += bonus;
@@ -490,17 +548,21 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
       text: newRecord
         ? "🏆 REKOR BARU! Ikan terbesar kamu!"
         : "Lempar kail lagi untuk hasil lebih besar!"
-    });
+    })
+    .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
   
   if (cmd === 'transfer') {
 
-  const target = msg.mentions.users.first();
-  const amt = parseInt(args[1]);
+  if (!msg.guild)
+    return msg.reply('❌ Command ini hanya bisa digunakan di server.');
 
-  if (!target || isNaN(amt))
+  const target = msg.mentions.users.first();
+  const amt = Number(args[1]);
+
+  if (!target || !Number.isInteger(amt))
     return msg.reply('Format: `.transfer @user 500`');
 
   if (amt <= 0)
@@ -512,7 +574,12 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   if (target.id === uid)
     return msg.reply('❌ Tidak bisa transfer ke diri sendiri.');
 
-  if (!db[uid].lastTransfer) db[uid].lastTransfer = 0;
+  
+  ensureUser(uid);
+  ensureUser(target.id);
+
+  if (!db[uid].lastTransfer)
+    db[uid].lastTransfer = 0;
 
   if (now - db[uid].lastTransfer < TRANSFER_COOLDOWN) {
     const sisa = Math.ceil((TRANSFER_COOLDOWN - (now - db[uid].lastTransfer)) / 1000);
@@ -522,7 +589,7 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   if (db[uid].coin < amt)
     return msg.reply('❌ Koin kamu tidak cukup.');
 
-  const taxRate = TAX_RATE || 0.05;
+  const taxRate = typeof TAX_RATE === "number" ? TAX_RATE : 0.05;
   const tax = Math.floor(amt * taxRate);
   const receive = amt - tax;
 
@@ -535,22 +602,21 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   const embed = new EmbedBuilder()
     .setColor(0x2ecc71)
     .setTitle("💸 TRANSAKSI BERHASIL")
-    .setThumbnail(target.displayAvatarURL())
+    .setThumbnail(target.displayAvatarURL({ dynamic: true }))
     .addFields(
-      { name: "👤 Dari", value: `${msg.author.username}`, inline: true },
-      { name: "📥 Ke", value: `${target.username}`, inline: true },
-      { name: "━━━━━━━━━━━━━━", value: " ", inline: false },
+      { name: "👤 Dari", value: `<@${uid}>`, inline: true },
+      { name: "📥 Ke", value: `<@${target.id}>`, inline: true },
       { name: "💰 Jumlah", value: koin(amt), inline: true },
-      { name: "💸 Pajak (5%)", value: koin(tax), inline: true },
+      { name: "💸 Pajak", value: koin(tax), inline: true },
       { name: "✅ Diterima", value: koin(receive), inline: true },
-      { name: "━━━━━━━━━━━━━━", value: " ", inline: false },
       { name: "💎 Sisa Saldo", value: koin(db[uid].coin), inline: false }
     )
-    .setFooter({ text: "Sistem Ekonomi RPG • Pajak menjaga stabilitas pasar" })
+    .setFooter({ text: `Pajak ${(taxRate * 100).toFixed(0)}% • Sistem Ekonomi RPG` })
     .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
+
 
  if (cmd === 'topfish') {
 
@@ -558,8 +624,8 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   const perPage = 10;
 
   const sorted = Object.entries(db)
-    .filter(u => u[1].fishxp && u[1].fishxp > 0)
-    .sort((a, b) => b[1].fishxp - a[1].fishxp);
+    .filter(u => u[1].fish && u[1].fish > 0)
+    .sort((a, b) => b[1].fish - a[1].fish);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
 
@@ -568,7 +634,6 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
 
   const start = (page - 1) * perPage;
   const end = start + perPage;
-
   const current = sorted.slice(start, end);
 
   let desc = "";
@@ -588,7 +653,7 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
       username = user.username;
     } catch (e) {}
 
-    desc += `${medal} **${rank}. ${username}** — 🎣 ${current[i][1].fishxp} XP\n`;
+    desc += `${medal} **${rank}. ${username}** — 🎣 ${current[i][1].fish} Ikan\n`;
   }
 
   const embed = new EmbedBuilder()
@@ -599,6 +664,7 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
 
   return msg.reply({ embeds: [embed] });
 }
+
 
   if (cmd === 'profile') {
     const needed = xpNeed(db[uid].level);
@@ -657,23 +723,40 @@ if (selected.tier === "Legendary") db[uid].legendFish++;
   return msg.reply({ embeds: [embed] });
 }
 
- if (cmd === 'addkoin') {
+if (cmd === 'addkoin') {
+
+
+  if (!msg.guild)
+    return msg.reply('❌ Command ini hanya bisa digunakan di server.');
+
 
   if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))
-    return msg.reply('❌ Admin only');
+    return msg.reply('❌ Hanya Admin yang bisa menggunakan command ini.');
 
   const target = msg.mentions.users.first();
-  const amt = parseInt(args[1]);
+  const amt = Number(args[1]);
 
-  if (!target || isNaN(amt) || amt <= 0)
+  if (!target || !Number.isInteger(amt) || amt <= 0)
     return msg.reply('Format: `.addkoin @user 100`');
 
+  
   ensureUser(target.id);
 
   db[target.id].coin += amt;
   saveDB();
 
-  return msg.reply(`🛠 Admin menambahkan ${koin(amt)} ke <@${target.id}>`);
+  const embed = new EmbedBuilder()
+    .setColor(0x2ecc71)
+    .setTitle("🛠 ADMIN ADD KOIN")
+    .addFields(
+      { name: "👤 Target", value: `<@${target.id}>`, inline: true },
+      { name: "💰 Ditambahkan", value: koin(amt), inline: true },
+      { name: "💎 Saldo Sekarang", value: koin(db[target.id].coin), inline: false }
+    )
+    .setFooter({ text: `Admin: ${msg.author.username}` })
+    .setTimestamp();
+
+  return msg.reply({ embeds: [embed] });
 }
 
 if (cmd === 'addstreak') {
@@ -699,3 +782,4 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
