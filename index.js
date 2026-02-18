@@ -31,6 +31,23 @@ let db = fs.existsSync(DB_FILE)
 const saveDB = () =>
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
+const shopItems = [
+ 
+  { name: "Basic Rod", type: "rod", price: 0, bonus: 0 },
+  { name: "Advanced Rod", type: "rod", price: 500, bonus: 10 },
+  { name: "Pro Rod", type: "rod", price: 1500, bonus: 25 },
+  { name: "Elite Rod", type: "rod", price: 3500, bonus: 50 },
+  { name: "Master Rod", type: "rod", price: 7000, bonus: 100 },
+  { name: "Legend Rod", type: "rod", price: 15000, bonus: 200 },
+
+  { name: "Normal Bait", type: "bait", price: 50, chanceBonus: 0 },
+  { name: "Premium Bait", type: "bait", price: 200, chanceBonus: 5 },
+  { name: "Epic Bait", type: "bait", price: 500, chanceBonus: 15 },
+  { name: "Legendary Bait", type: "bait", price: 1200, chanceBonus: 35 },
+  { name: "Mythic Bait", type: "bait", price: 3000, chanceBonus: 70 },
+];
+
+
 const koin = n => `${n.toLocaleString('id-ID')} 🪙`;
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const xpNeed = lvl => lvl * lvl * 100;
@@ -83,36 +100,35 @@ client.on('messageCreate', async msg => {
   const now = Date.now();
 
   function ensureUser(id) {
-    if (!db[id]) {
-      db[id] = {
-        coin: 0,
-        bank: 0,
-        xp: 0,
-        level: 1,
-        lastXp: 0,
-        lastWork: 0,
-        lastFish: 0,
-        lastTransfer: 0,
-        lastAbsen: null,
-        streak: 0,
-        dailyQuest: null,
-        fish: 0,
-        rareFish: 0,
-        legendFish: 0,
-        biggestFish: 0,
-        totalWork: 0,
-        totalChat: 0,
-        totalTransfer: 0,
-        totalEarned: 0,
-        inventory: [],
-        rod: "Basic Rod"
-      };
-
-      saveDB();
-    }
+  if (!db[id]) {
+    db[id] = {
+      coin: 0,
+      bank: 0,
+      xp: 0,
+      level: 1,
+      lastXp: 0,
+      lastWork: 0,
+      lastFish: 0,
+      lastTransfer: 0,
+      lastAbsen: null,
+      streak: 0,
+      dailyQuest: null,
+      fish: 0,
+      rareFish: 0,
+      legendFish: 0,
+      biggestFish: 0,
+      totalWork: 0,
+      totalChat: 0,
+      totalTransfer: 0,
+      totalEarned: 0,
+      inventory: [],       
+      rod: "Basic Rod",   
+      bait: "Normal Bait" 
+    };
+    saveDB();
   }
+}
 
-  // 🔥 PINDAHKAN KE SINI
   ensureUser(uid);
 
   const today = todayStr();
@@ -189,39 +205,43 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
 
 
   if (cmd === 'help') {
-
   const embed = new EmbedBuilder()
-    .setColor(0x0099ff)
+    .setColor(0x00bfff)
     .setAuthor({
       name: `${msg.guild.name} • Economy RPG`,
       iconURL: msg.guild.iconURL()
     })
-    .setDescription("🎮 Gunakan command berikut untuk bermain:\nPrefix: `.`\n")
+    .setTitle("🎮 Daftar Command")
+    .setDescription("Gunakan prefix `.` sebelum command.\nBerikut beberapa command yang tersedia:")
     .addFields(
       {
         name: "🗓 Daily",
-        value: "` .absen ` — Klaim reward harian\n` .quest ` — Cek quest harian",
+        value: "```.absen``` — Klaim reward harian\n```.quest``` — Cek quest harian",
         inline: false
       },
       {
         name: "💰 Economy",
-        value: "` .kerja ` — Cari koin\n` .transfer @user jumlah ` — Kirim koin",
+        value: "```.kerja``` — Cari koin\n```.transfer @user jumlah``` — Kirim koin",
         inline: false
       },
       {
         name: "🎣 Fishing",
-        value: "` .fish ` — Mancing ikan\n` .topfish ` — Ranking pemancing",
+        value: "```.fish``` — Mancing ikan\n```.topfish``` — Ranking pemancing\n```.shop``` — Beli Rod & Bait\n```.buy <item>``` — Membeli item\n```.inv / .inventory``` — Lihat inventory",
         inline: false
       },
       {
         name: "👤 Profile & Rank",
-        value: "` .profile ` — Lihat profile\n` .top ` — Ranking koin",
+        value: "```.profile``` — Lihat profile lengkap\n```.top``` — Ranking koin server",
+        inline: false
+      },
+      {
+        name: "⚙ Admin",
+        value: "```.addkoin @user jumlah``` — Tambah koin user\n```.addstreak @user jumlah``` — Tambah streak user",
         inline: false
       }
     )
-    .setFooter({
-      text: "⭐ Level Up • 🎣 Rare Fish • 🐉 Legendary Hunt"
-    });
+    .setFooter({ text: "⭐ Level Up • 🎣 Rare Fish • 🐉 Legendary Hunt • Selamat bermain!" })
+    .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
@@ -432,14 +452,11 @@ const job = jobs[Math.floor(Math.random() * jobs.length)];
 }
 
 if (cmd === 'fish') {
-
-  if (!msg.guild)
-    return msg.reply('❌ Command ini hanya bisa digunakan di server.');
+  if (!msg.guild) return msg.reply('❌ Command ini hanya bisa digunakan di server.');
 
   ensureUser(uid);
 
-  if (!db[uid].lastFish)
-    db[uid].lastFish = 0;
+  if (!db[uid].lastFish) db[uid].lastFish = 0;
 
   if (now - db[uid].lastFish < FISH_COOLDOWN) {
     const sisa = Math.ceil((FISH_COOLDOWN - (now - db[uid].lastFish)) / 1000);
@@ -448,36 +465,40 @@ if (cmd === 'fish') {
 
   db[uid].lastFish = now;
 
+ 
   const fishes = [
+   
     { name: "🐟 Ikan Lele", chance: 15, min: 20, max: 40, xp: 15, tier: "Common" },
     { name: "🐠 Ikan Nila", chance: 15, min: 25, max: 45, xp: 18, tier: "Common" },
     { name: "🐡 Ikan Buntal", chance: 12, min: 30, max: 50, xp: 20, tier: "Common" },
     { name: "🦐 Udang Sungai", chance: 10, min: 15, max: 35, xp: 12, tier: "Common" },
     { name: "🦀 Kepiting", chance: 8, min: 20, max: 40, xp: 18, tier: "Common" },
+    { name: "🐚 Kerang Laut", chance: 5, min: 15, max: 30, xp: 10, tier: "Common" },
+    { name: "🦑 Cumi-Cumi", chance: 5, min: 25, max: 45, xp: 18, tier: "Common" },
 
+   
     { name: "🐬 Lumba-Lumba Kecil", chance: 6, min: 60, max: 100, xp: 40, tier: "Rare" },
     { name: "🦈 Hiu Karang", chance: 5, min: 70, max: 120, xp: 55, tier: "Rare" },
     { name: "🐙 Gurita Laut", chance: 6, min: 50, max: 90, xp: 35, tier: "Rare" },
     { name: "🐢 Penyu Laut", chance: 5, min: 60, max: 110, xp: 45, tier: "Rare" },
-
     { name: "💎 Golden Fish", chance: 3, min: 120, max: 180, xp: 80, tier: "Rare" },
     { name: "🔥 Lava Fish", chance: 2, min: 130, max: 190, xp: 90, tier: "Rare" },
     { name: "❄ Ice Fish", chance: 2, min: 120, max: 170, xp: 85, tier: "Rare" },
     { name: "⚡ Thunder Fish", chance: 1, min: 150, max: 220, xp: 100, tier: "Rare" },
 
+    
     { name: "🌊 Kraken Muda", chance: 1.5, min: 200, max: 300, xp: 130, tier: "Legendary" },
     { name: "🌟 Celestial Carp", chance: 1, min: 220, max: 320, xp: 150, tier: "Legendary" },
     { name: "🌈 Rainbow Dragonfish", chance: 0.5, min: 250, max: 350, xp: 180, tier: "Legendary" },
     { name: "🐉 Ancient Dragon Fish", chance: 0.5, min: 300, max: 450, xp: 250, tier: "Legendary" },
-    { name: "👑 King of The Ocean", chance: 0.5, min: 350, max: 500, xp: 300, tier: "Legendary" }
+    { name: "👑 King of The Ocean", chance: 0.5, min: 350, max: 500, xp: 300, tier: "Legendary" },
+    { name: "🌌 Cosmic Leviathan", chance: 0.3, min: 400, max: 550, xp: 350, tier: "Legendary" },
   ];
 
-  
   const totalChance = fishes.reduce((sum, f) => sum + f.chance, 0);
   let roll = Math.random() * totalChance;
   let cumulative = 0;
   let selected = fishes[0];
-
   for (let fish of fishes) {
     cumulative += fish.chance;
     if (roll <= cumulative) {
@@ -494,21 +515,14 @@ if (cmd === 'fish') {
   db[uid].xp += xpGain;
   db[uid].fish = (db[uid].fish || 0) + 1;
 
-  if (selected.tier === "Rare")
-    db[uid].rareFish = (db[uid].rareFish || 0) + 1;
+  if (selected.tier === "Rare") db[uid].rareFish = (db[uid].rareFish || 0) + 1;
+  if (selected.tier === "Legendary") db[uid].legendFish = (db[uid].legendFish || 0) + 1;
 
-  if (selected.tier === "Legendary")
-    db[uid].legendFish = (db[uid].legendFish || 0) + 1;
-
-  
   if (db[uid].dailyQuest) {
     const q = db[uid].dailyQuest;
-
     if (q.type === "fish") q.progress++;
     if (q.type === "rareFish" && selected.tier === "Rare") q.progress++;
-
-    if (q.progress > q.target)
-      q.progress = q.target;
+    if (q.progress > q.target) q.progress = q.target;
   }
 
   let newRecord = false;
@@ -517,29 +531,25 @@ if (cmd === 'fish') {
     newRecord = true;
   }
 
- 
   while (db[uid].xp >= xpNeed(db[uid].level)) {
     const need = xpNeed(db[uid].level);
     db[uid].xp -= need;
     db[uid].level++;
     const bonus = db[uid].level * 15;
     db[uid].coin += bonus;
-
-    msg.channel.send(
-      `🎉 ${msg.author.username} naik ke Level ${db[uid].level}!\n🪙 Bonus: ${koin(bonus)}`
-    );
+    msg.channel.send(`🎉 ${msg.author.username} naik ke Level ${db[uid].level}!\n🪙 Bonus: ${koin(bonus)}`);
   }
 
   saveDB();
 
-  let color = 0x2ecc71;
+  let color = 0x2ecc71; 
   if (selected.tier === "Rare") color = 0x3498db;
   if (selected.tier === "Legendary") color = 0xf1c40f;
 
   const embed = new EmbedBuilder()
     .setColor(color)
     .setTitle("🎣 STRIKE!!!")
-    .setDescription(`${selected.name}`)
+    .setDescription(`Kamu menangkap **${selected.name}**!`)
     .addFields(
       { name: "📏 Ukuran", value: `${size} cm`, inline: true },
       { name: "🏷 Tier", value: selected.tier, inline: true },
@@ -556,7 +566,7 @@ if (cmd === 'fish') {
 
   return msg.reply({ embeds: [embed] });
 }
-  
+ 
   if (cmd === 'transfer') {
 
   if (!msg.guild)
@@ -622,7 +632,6 @@ if (cmd === 'fish') {
 
 
  if (cmd === 'topfish') {
-
   const page = parseInt(args[0]) || 1;
   const perPage = 10;
 
@@ -656,40 +665,63 @@ if (cmd === 'fish') {
       username = user.username;
     } catch (e) {}
 
-    desc += `${medal} **${rank}. ${username}** — 🎣 ${current[i][1].fish} Ikan\n`;
+    const fishCount = current[i][1].fish || 0;
+    const rareCount = current[i][1].rareFish || 0;
+    const legendCount = current[i][1].legendFish || 0;
+
+    let fishInfo = `🎣 ${fishCount} ikan`;
+    if (rareCount > 0) fishInfo += ` | 💎 ${rareCount} Rare`;
+    if (legendCount > 0) fishInfo += ` | 👑 ${legendCount} Legendary`;
+
+    desc += `${medal} **${rank}. ${username}** — ${fishInfo}\n`;
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x00bfff)
+    .setColor(0x1abc9c)
     .setTitle("🎣 TOP FISHERMAN SERVER")
     .setDescription(desc || "Belum ada fisherman.")
-    .setFooter({ text: `Halaman ${page} dari ${totalPages}` });
+    .setFooter({ text: `Halaman ${page} dari ${totalPages}` })
+    .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
 
-
   if (cmd === 'profile') {
-    const needed = xpNeed(db[uid].level);
+  ensureUser(uid);
 
-    const embed = new EmbedBuilder()
-      .setColor(0x5865F2)
-      .setAuthor({
-        name: `${msg.author.username} Profile`,
-        iconURL: msg.author.displayAvatarURL()
-      })
-      .addFields(
-        { name: '⭐ Level', value: `${db[uid].level}`, inline: true },
-        { name: '🪙 Koin', value: koin(db[uid].coin), inline: true },
-        {
-          name: '📊 XP',
-          value: `${progressBar(db[uid].xp, needed)}\n${db[uid].xp}/${needed}`
-        },
-        { name: '🔥 Streak', value: `${db[uid].streak}` }
-      );
+  const needed = xpNeed(db[uid].level);
 
-    return msg.reply({ embeds: [embed] });
-  }
+  const rod = db[uid].rod || "Basic Rod";
+  const bait = db[uid].bait || "Normal Bait";
+
+  const embed = new EmbedBuilder()
+    .setColor(0x5865F2)
+    .setAuthor({
+      name: `${msg.author.username} • Profile`,
+      iconURL: msg.author.displayAvatarURL()
+    })
+    .setThumbnail(msg.author.displayAvatarURL({ dynamic: true }))
+    .addFields(
+      { name: '⭐ Level', value: `${db[uid].level}`, inline: true },
+      { name: '🪙 Koin', value: koin(db[uid].coin), inline: true },
+      { 
+        name: '📊 XP', 
+        value: `${progressBar(db[uid].xp, needed)}\n${db[uid].xp}/${needed}`, 
+        inline: false 
+      },
+      { name: '🔥 Streak', value: `${db[uid].streak} hari`, inline: true },
+      { name: '🎣 Rod', value: rod, inline: true },
+      { name: '🪱 Bait', value: bait, inline: true },
+      { name: '🐟 Total Fish', value: `${db[uid].fish}`, inline: true },
+      { name: '💎 Rare Fish', value: `${db[uid].rareFish || 0}`, inline: true },
+      { name: '👑 Legendary Fish', value: `${db[uid].legendFish || 0}`, inline: true }
+    )
+    .setFooter({ text: "🌊 Selamat memancing!" })
+    .setTimestamp();
+
+  return msg.reply({ embeds: [embed] });
+}
+
 
   if (cmd === 'top') {
 
@@ -722,6 +754,67 @@ if (cmd === 'fish') {
     .setTitle("🏆 TOP KOIN SERVER")
     .setDescription(desc || "Belum ada data.")
     .setFooter({ text: `Halaman ${page} dari ${totalPages}` });
+
+  return msg.reply({ embeds: [embed] });
+}
+
+if (cmd === 'shop') {
+  let desc = shopItems.map((i, idx) => {
+    if (i.type === "rod") return `🎣 **${i.name}** — ${koin(i.price)} | Bonus Rod: +${i.bonus}`;
+    if (i.type === "bait") return `🪱 **${i.name}** — ${koin(i.price)} | Chance Bonus: +${i.chanceBonus}%`;
+  }).join('\n');
+
+  const embed = new EmbedBuilder()
+    .setColor(0x00bfff)
+    .setTitle("🛒 FISH SHOP")
+    .setDescription(desc)
+    .setFooter({ text: "Gunakan `.buy <nama item>` untuk membeli" })
+    .setTimestamp();
+
+  return msg.reply({ embeds: [embed] });
+}
+
+if (cmd === 'buy') {
+  const itemName = args.join(' ');
+  const item = shopItems.find(i => i.name.toLowerCase() === itemName.toLowerCase());
+
+  if (!item) return msg.reply('❌ Item tidak ditemukan di shop.');
+  ensureUser(uid);
+
+  if (db[uid].coin < item.price)
+    return msg.reply(`❌ Koin kamu tidak cukup! Dibutuhkan: ${koin(item.price)}, Saldo: ${koin(db[uid].coin)}`);
+
+  db[uid].coin -= item.price;
+
+  if (item.type === "rod") {
+    db[uid].rod = item.name;
+  } else if (item.type === "bait") {
+    db[uid].bait = item.name;
+  }
+
+  saveDB();
+
+  return msg.reply(`✅ Berhasil membeli **${item.name}**!\n💰 Sisa koin: ${koin(db[uid].coin)}`);
+}
+
+if (cmd === 'inv' || cmd === 'inventory') {
+  ensureUser(uid);
+
+  const rod = db[uid].rod || "Basic Rod";
+  const bait = db[uid].bait || "Normal Bait";
+
+  const embed = new EmbedBuilder()
+    .setColor(0x00ff88)
+    .setTitle(`${msg.author.username} • Inventory`)
+    .addFields(
+      { name: "🎣 Rod", value: rod, inline: true },
+      { name: "🪱 Bait", value: bait, inline: true },
+      { name: "🐟 Total Ikan", value: `${db[uid].fish}`, inline: true },
+      { name: "💎 Rare Fish", value: `${db[uid].rareFish}`, inline: true },
+      { name: "🐉 Legendary Fish", value: `${db[uid].legendFish}`, inline: true }
+    )
+    .setFooter({ text: "Tingkatkan rod & bait untuk hasil mancing lebih besar!" })
+    .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
@@ -785,5 +878,6 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
