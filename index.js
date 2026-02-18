@@ -8,9 +8,9 @@ const fs = require('fs');
 require('dotenv').config();
 
 const PREFIX = '.';
-const WORK_COOLDOWN = 30 * 60 * 1000;
+const WORK_COOLDOWN = 5 * 60 * 1000;
 const XP_COOLDOWN = 60 * 1000;
-const FISH_COOLDOWN = 60 * 1000;
+const FISH_COOLDOWN = 30 * 1000;
 const TAX_RATE = 0.05;
 const TRANSFER_COOLDOWN = 10 * 1000; 
 
@@ -32,21 +32,49 @@ const saveDB = () =>
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
 const shopItems = [
- 
+  
   { name: "Basic Rod", type: "rod", price: 0, bonus: 0 },
+  { name: "Novice Rod", type: "rod", price: 200, bonus: 5 },
   { name: "Advanced Rod", type: "rod", price: 500, bonus: 10 },
   { name: "Pro Rod", type: "rod", price: 1500, bonus: 25 },
   { name: "Elite Rod", type: "rod", price: 3500, bonus: 50 },
   { name: "Master Rod", type: "rod", price: 7000, bonus: 100 },
   { name: "Legend Rod", type: "rod", price: 15000, bonus: 200 },
+  { name: "Mythic Rod", type: "rod", price: 30000, bonus: 400 },
+  { name: "Ancient Rod", type: "rod", price: 60000, bonus: 800 },
+  { name: "Divine Rod", type: "rod", price: 120000, bonus: 1600 },
+  { name: "Celestial Rod", type: "rod", price: 250000, bonus: 3200 },
+  { name: "Titan Rod", type: "rod", price: 500000, bonus: 6400 },
+  { name: "Omega Rod", type: "rod", price: 1000000, bonus: 12800 },
+  { name: "Eternal Rod", type: "rod", price: 2000000, bonus: 25600 },
+  { name: "Godly Rod", type: "rod", price: 5000000, bonus: 51200 },
+  { name: "Supreme Rod", type: "rod", price: 10000000, bonus: 102400 },
+  { name: "Infinity Rod", type: "rod", price: 25000000, bonus: 204800 },
+  { name: "Omega+ Rod", type: "rod", price: 50000000, bonus: 409600 },
+  { name: "Legendary Omega Rod", type: "rod", price: 100000000, bonus: 819200 },
+  { name: "Ultimate Rod", type: "rod", price: 250000000, bonus: 1638400 },
 
   { name: "Normal Bait", type: "bait", price: 50, chanceBonus: 0 },
   { name: "Premium Bait", type: "bait", price: 200, chanceBonus: 5 },
   { name: "Epic Bait", type: "bait", price: 500, chanceBonus: 15 },
   { name: "Legendary Bait", type: "bait", price: 1200, chanceBonus: 35 },
   { name: "Mythic Bait", type: "bait", price: 3000, chanceBonus: 70 },
+  { name: "Ancient Bait", type: "bait", price: 7000, chanceBonus: 150 },
+  { name: "Divine Bait", type: "bait", price: 15000, chanceBonus: 300 },
+  { name: "Celestial Bait", type: "bait", price: 35000, chanceBonus: 700 },
+  { name: "Titan Bait", type: "bait", price: 80000, chanceBonus: 1500 },
+  { name: "Omega Bait", type: "bait", price: 200000, chanceBonus: 3500 },
+  { name: "Eternal Bait", type: "bait", price: 500000, chanceBonus: 7000 },
+  { name: "Godly Bait", type: "bait", price: 1000000, chanceBonus: 14000 },
+  { name: "Supreme Bait", type: "bait", price: 2500000, chanceBonus: 28000 },
+  { name: "Infinity Bait", type: "bait", price: 5000000, chanceBonus: 56000 },
+  { name: "Omega+ Bait", type: "bait", price: 10000000, chanceBonus: 112000 },
+  { name: "Legendary Omega Bait", type: "bait", price: 25000000, chanceBonus: 224000 },
+  { name: "Ultimate Bait", type: "bait", price: 50000000, chanceBonus: 448000 },
+  { name: "Mythic+ Bait", type: "bait", price: 100000000, chanceBonus: 896000 },
+  { name: "Godly+ Bait", type: "bait", price: 250000000, chanceBonus: 1792000 },
+  { name: "Supreme+ Bait", type: "bait", price: 500000000, chanceBonus: 3584000 },
 ];
-
 
 const koin = n => `${n.toLocaleString('id-ID')} 🪙`;
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -209,43 +237,43 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
     .setColor(0x00bfff)
     .setAuthor({
       name: `${msg.guild.name} • Economy RPG`,
-      iconURL: msg.guild.iconURL()
+      iconURL: msg.guild.iconURL({ dynamic: true })
     })
-    .setTitle("🎮 Daftar Command")
+    .setTitle("🎮 Daftar Command • Prefix: `.`")
     .setDescription("Gunakan prefix `.` sebelum command.\nBerikut beberapa command yang tersedia:")
     .addFields(
       {
-        name: "🗓 Daily",
-        value: "```.absen``` — Klaim reward harian\n```.quest``` — Cek quest harian",
+        name: "🗓 Daily & Quest",
+        value: "• `absen` — Klaim reward harian\n• `quest` — Cek quest harian",
         inline: false
       },
       {
         name: "💰 Economy",
-        value: "```.kerja``` — Cari koin\n```.transfer @user jumlah``` — Kirim koin",
+        value: "• `kerja` — Cari koin\n• `transfer @user <jumlah>` — Kirim koin ke user lain",
         inline: false
       },
       {
         name: "🎣 Fishing",
-        value: "```.fish``` — Mancing ikan\n```.topfish``` — Ranking pemancing\n```.shop``` — Beli Rod & Bait\n```.buy <item>``` — Membeli item\n```.inv / .inventory``` — Lihat inventory",
+        value: "• `fish` — Mancing ikan\n• `topfish` — Ranking pemancing\n• `shop` — Beli Rod & Bait\n• `buy <item>` — Membeli item\n• `inv` / `inventory` — Lihat inventory\n• `sell <ikan>` — Menjual 1 ikan (Common / Rare / Epic)\n• `sellall [tier]` — Menjual semua ikan yang bisa dijual (opsional pilih tier: common/rare/epic)",
         inline: false
       },
       {
         name: "👤 Profile & Rank",
-        value: "```.profile``` — Lihat profile lengkap\n```.top``` — Ranking koin server",
+        value: "• `profile` — Lihat profile lengkap\n• `top` — Ranking koin server",
         inline: false
       },
       {
         name: "⚙ Admin",
-        value: "```.addkoin @user jumlah``` — Tambah koin user\n```.addstreak @user jumlah``` — Tambah streak user",
+        value: "• `addkoin @user <jumlah>` — Tambah koin user\n• `addstreak @user <jumlah>` — Tambah streak user",
         inline: false
       }
     )
-    .setFooter({ text: "⭐ Level Up • 🎣 Rare Fish • 🐉 Legendary Hunt • Selamat bermain!" })
+    .setFooter({ text: "⭐ Level Up • 🎣 Rare Fish • 🐉 Legendary Hunt • Gunakan `.sell` & `.sellall` untuk jual ikan!" })
     .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
-
+  
   if (cmd === 'absen') {
 
   if (db[uid].lastAbsen === today)
@@ -467,33 +495,118 @@ if (cmd === 'fish') {
 
  
   const fishes = [
-   
-    { name: "🐟 Ikan Lele", chance: 15, min: 20, max: 40, xp: 15, tier: "Common" },
-    { name: "🐠 Ikan Nila", chance: 15, min: 25, max: 45, xp: 18, tier: "Common" },
-    { name: "🐡 Ikan Buntal", chance: 12, min: 30, max: 50, xp: 20, tier: "Common" },
-    { name: "🦐 Udang Sungai", chance: 10, min: 15, max: 35, xp: 12, tier: "Common" },
-    { name: "🦀 Kepiting", chance: 8, min: 20, max: 40, xp: 18, tier: "Common" },
-    { name: "🐚 Kerang Laut", chance: 5, min: 15, max: 30, xp: 10, tier: "Common" },
-    { name: "🦑 Cumi-Cumi", chance: 5, min: 25, max: 45, xp: 18, tier: "Common" },
+  
+  { name: "🐟 Ikan Lele", chance: 15, min: 20, max: 40, xp: 15, tier: "Common" },
+  { name: "🐠 Ikan Nila", chance: 14, min: 25, max: 45, xp: 18, tier: "Common" },
+  { name: "🐡 Ikan Buntal", chance: 13, min: 30, max: 50, xp: 20, tier: "Common" },
+  { name: "🦐 Udang Sungai", chance: 12, min: 15, max: 35, xp: 12, tier: "Common" },
+  { name: "🦀 Kepiting", chance: 10, min: 20, max: 40, xp: 18, tier: "Common" },
+  { name: "🐚 Kerang Laut", chance: 8, min: 15, max: 30, xp: 10, tier: "Common" },
+  { name: "🦑 Cumi-Cumi", chance: 7, min: 25, max: 45, xp: 18, tier: "Common" },
+  { name: "🐟 Ikan Mas", chance: 12, min: 20, max: 40, xp: 16, tier: "Common" },
+  { name: "🐡 Ikan Kakap", chance: 11, min: 25, max: 50, xp: 20, tier: "Common" },
+  { name: "🦐 Udang Galah", chance: 10, min: 18, max: 38, xp: 14, tier: "Common" },
+  { name: "🦀 Kepiting Hias", chance: 9, min: 20, max: 35, xp: 17, tier: "Common" },
+  { name: "🐟 Ikan Gabus", chance: 12, min: 22, max: 42, xp: 18, tier: "Common" },
+  { name: "🐠 Ikan Gurami", chance: 10, min: 25, max: 45, xp: 19, tier: "Common" },
+  { name: "🐡 Ikan Patin", chance: 9, min: 30, max: 50, xp: 22, tier: "Common" },
+  { name: "🐟 Ikan Mujair", chance: 11, min: 25, max: 40, xp: 18, tier: "Common" },
+  { name: "🦐 Udang Pasir", chance: 8, min: 20, max: 38, xp: 16, tier: "Common" },
+  { name: "🦀 Kepiting Batu", chance: 7, min: 22, max: 40, xp: 18, tier: "Common" },
+  { name: "🐟 Ikan Tongkol", chance: 6, min: 25, max: 42, xp: 18, tier: "Common" },
+  { name: "🐡 Ikan Layur", chance: 7, min: 20, max: 40, xp: 17, tier: "Common" },
+  { name: "🐠 Ikan Kembung", chance: 7, min: 18, max: 38, xp: 16, tier: "Common" },
+  { name: "🦐 Udang Vannamei", chance: 6, min: 22, max: 36, xp: 15, tier: "Common" },
+  { name: "🦀 Kepiting Laut", chance: 5, min: 20, max: 35, xp: 17, tier: "Common" },
+  { name: "🐟 Ikan Teri", chance: 6, min: 15, max: 30, xp: 12, tier: "Common" },
+  { name: "🐡 Ikan Selar", chance: 6, min: 20, max: 35, xp: 15, tier: "Common" },
+  { name: "🐠 Ikan Baramundi", chance: 5, min: 22, max: 38, xp: 16, tier: "Common" },
+  { name: "🦑 Cumi Raksasa", chance: 4, min: 25, max: 45, xp: 18, tier: "Common" },
+  { name: "🐟 Ikan Hias Kecil", chance: 6, min: 18, max: 35, xp: 15, tier: "Common" },
+  { name: "🐡 Ikan Koi", chance: 5, min: 20, max: 40, xp: 18, tier: "Common" },
+  { name: "🐠 Ikan Kakap Putih", chance: 4, min: 22, max: 42, xp: 19, tier: "Common" },
+  { name: "🦐 Udang Karang", chance: 3, min: 20, max: 38, xp: 16, tier: "Common" },
 
-   
-    { name: "🐬 Lumba-Lumba Kecil", chance: 6, min: 60, max: 100, xp: 40, tier: "Rare" },
-    { name: "🦈 Hiu Karang", chance: 5, min: 70, max: 120, xp: 55, tier: "Rare" },
-    { name: "🐙 Gurita Laut", chance: 6, min: 50, max: 90, xp: 35, tier: "Rare" },
-    { name: "🐢 Penyu Laut", chance: 5, min: 60, max: 110, xp: 45, tier: "Rare" },
-    { name: "💎 Golden Fish", chance: 3, min: 120, max: 180, xp: 80, tier: "Rare" },
-    { name: "🔥 Lava Fish", chance: 2, min: 130, max: 190, xp: 90, tier: "Rare" },
-    { name: "❄ Ice Fish", chance: 2, min: 120, max: 170, xp: 85, tier: "Rare" },
-    { name: "⚡ Thunder Fish", chance: 1, min: 150, max: 220, xp: 100, tier: "Rare" },
+  { name: "🐬 Lumba-Lumba Kecil", chance: 6, min: 60, max: 100, xp: 40, tier: "Rare" },
+  { name: "🦈 Hiu Karang", chance: 5, min: 70, max: 120, xp: 55, tier: "Rare" },
+  { name: "🐙 Gurita Laut", chance: 6, min: 50, max: 90, xp: 35, tier: "Rare" },
+  { name: "🐢 Penyu Laut", chance: 5, min: 60, max: 110, xp: 45, tier: "Rare" },
+  { name: "💎 Golden Fish", chance: 3, min: 120, max: 180, xp: 80, tier: "Rare" },
+  { name: "🔥 Lava Fish", chance: 2, min: 130, max: 190, xp: 90, tier: "Rare" },
+  { name: "❄ Ice Fish", chance: 2, min: 120, max: 170, xp: 85, tier: "Rare" },
+  { name: "⚡ Thunder Fish", chance: 1, min: 150, max: 220, xp: 100, tier: "Rare" },
+  { name: "🌊 Manta Ray", chance: 3, min: 100, max: 160, xp: 60, tier: "Rare" },
+  { name: "🦑 Giant Squid", chance: 2, min: 140, max: 200, xp: 95, tier: "Rare" },
+  { name: "🐠 Napoleon Fish", chance: 2, min: 130, max: 190, xp: 90, tier: "Rare" },
+  { name: "🦐 Lobster Laut", chance: 2, min: 120, max: 180, xp: 80, tier: "Rare" },
+  { name: "🐡 Pufferfish Raksasa", chance: 1.5, min: 140, max: 200, xp: 95, tier: "Rare" },
+  { name: "🐟 Ikan Tongkol Raksasa", chance: 1.5, min: 150, max: 210, xp: 100, tier: "Rare" },
+  { name: "🦈 Hiu Putih Kecil", chance: 1.5, min: 160, max: 220, xp: 105, tier: "Rare" },
 
-    
-    { name: "🌊 Kraken Muda", chance: 1.5, min: 200, max: 300, xp: 130, tier: "Legendary" },
-    { name: "🌟 Celestial Carp", chance: 1, min: 220, max: 320, xp: 150, tier: "Legendary" },
-    { name: "🌈 Rainbow Dragonfish", chance: 0.5, min: 250, max: 350, xp: 180, tier: "Legendary" },
-    { name: "🐉 Ancient Dragon Fish", chance: 0.5, min: 300, max: 450, xp: 250, tier: "Legendary" },
-    { name: "👑 King of The Ocean", chance: 0.5, min: 350, max: 500, xp: 300, tier: "Legendary" },
-    { name: "🌌 Cosmic Leviathan", chance: 0.3, min: 400, max: 550, xp: 350, tier: "Legendary" },
-  ];
+  { name: "🌪 Tempest Tuna", chance: 1.5, min: 200, max: 280, xp: 120, tier: "Epic" },
+  { name: "🔥 Phoenix Fish", chance: 1.2, min: 210, max: 300, xp: 130, tier: "Epic" },
+  { name: "❄ Frostfin Leviathan", chance: 1, min: 220, max: 320, xp: 140, tier: "Epic" },
+  { name: "⚡ Stormray", chance: 0.8, min: 230, max: 350, xp: 150, tier: "Epic" },
+  { name: "💎 Diamondback Angler", chance: 1, min: 240, max: 360, xp: 155, tier: "Epic" },
+  { name: "🌊 Abyssal Serpent", chance: 0.9, min: 250, max: 370, xp: 160, tier: "Epic" },
+  { name: "🦈 Shadow Shark", chance: 1, min: 240, max: 350, xp: 150, tier: "Epic" },
+  { name: "🐉 Infernal Dragonfish", chance: 0.8, min: 260, max: 380, xp: 165, tier: "Epic" },
+  { name: "🌟 Celestial Stingray", chance: 0.9, min: 270, max: 390, xp: 170, tier: "Epic" },
+  { name: "💨 Gale Barracuda", chance: 1, min: 250, max: 360, xp: 160, tier: "Epic" },
+  { name: "🐬 Lightning Dolphin", chance: 0.7, min: 260, max: 380, xp: 165, tier: "Epic" },
+  { name: "🐠 Tempest Koi", chance: 0.6, min: 250, max: 370, xp: 160, tier: "Epic" },
+  { name: "🦑 Phantom Squid", chance: 0.5, min: 270, max: 390, xp: 175, tier: "Epic" },
+  { name: "🐡 Magma Blowfish", chance: 0.5, min: 280, max: 400, xp: 180, tier: "Epic" },
+  { name: "🐢 Glacier Turtle", chance: 0.4, min: 290, max: 420, xp: 185, tier: "Epic" },
+
+  { name: "🌊 Kraken Muda", chance: 1.5, min: 200, max: 300, xp: 130, tier: "Legendary" },
+  { name: "🌟 Celestial Carp", chance: 1, min: 220, max: 320, xp: 150, tier: "Legendary" },
+  { name: "🌈 Rainbow Dragonfish", chance: 0.5, min: 250, max: 350, xp: 180, tier: "Legendary" },
+  { name: "🐉 Ancient Dragon Fish", chance: 0.5, min: 300, max: 450, xp: 250, tier: "Legendary" },
+  { name: "👑 King of The Ocean", chance: 0.5, min: 350, max: 500, xp: 300, tier: "Legendary" },
+  { name: "🌌 Cosmic Leviathan", chance: 0.3, min: 400, max: 550, xp: 350, tier: "Legendary" },
+  { name: "🌠 Starfin Dragon", chance: 0.4, min: 370, max: 520, xp: 320, tier: "Legendary" },
+  { name: "🪐 Neptune’s Wrath", chance: 0.2, min: 450, max: 600, xp: 400, tier: "Legendary" },
+  { name: "🌌 Void Serpent", chance: 0.1, min: 500, max: 650, xp: 450, tier: "Legendary" },
+  { name: "🔥 Inferno Leviathan", chance: 0.15, min: 480, max: 650, xp: 420, tier: "Legendary" },
+  { name: "💫 Eternal Leviathan", chance: 0.1, min: 520, max: 700, xp: 480, tier: "Legendary" },
+  { name: "🌠 Galactic Dragon", chance: 0.05, min: 550, max: 750, xp: 500, tier: "Legendary" },
+  { name: "🪐 Titan Kraken", chance: 0.05, min: 600, max: 800, xp: 550, tier: "Legendary" },
+  { name: "🌌 Omega Leviathan", chance: 0.04, min: 620, max: 820, xp: 560, tier: "Legendary" },
+  { name: "🌟 Starfire Serpent", chance: 0.03, min: 640, max: 840, xp: 570, tier: "Legendary" },
+  { name: "🪐 Infinity Dragon", chance: 0.03, min: 660, max: 860, xp: 580, tier: "Legendary" },
+  { name: "🔥 Pyro Leviathan", chance: 0.02, min: 680, max: 880, xp: 590, tier: "Legendary" },
+  { name: "❄ Glacial Dragon", chance: 0.02, min: 700, max: 900, xp: 600, tier: "Legendary" },
+  { name: "⚡ Tempest Titan", chance: 0.015, min: 720, max: 920, xp: 610, tier: "Legendary" },
+  { name: "💎 Prism Kraken", chance: 0.015, min: 740, max: 940, xp: 620, tier: "Legendary" },
+
+  { name: "🌌 Void Leviathan", chance: 0.2, min: 500, max: 700, xp: 500, tier: "Mythic" },
+  { name: "🌠 Astral Dragon", chance: 0.15, min: 520, max: 720, xp: 520, tier: "Mythic" },
+  { name: "🪐 Titan Kraken", chance: 0.12, min: 550, max: 750, xp: 550, tier: "Mythic" },
+  { name: "💫 Eternal Leviathan", chance: 0.1, min: 560, max: 780, xp: 580, tier: "Mythic" },
+  { name: "🌌 Cosmic Serpent", chance: 0.08, min: 600, max: 800, xp: 600, tier: "Mythic" },
+  { name: "🌟 Starforge Dragon", chance: 0.07, min: 620, max: 820, xp: 620, tier: "Mythic" },
+  { name: "🔥 Inferno Titan", chance: 0.06, min: 640, max: 850, xp: 640, tier: "Mythic" },
+  { name: "❄ Frostfire Leviathan", chance: 0.05, min: 660, max: 870, xp: 660, tier: "Mythic" },
+  { name: "⚡ Thunderwyrm", chance: 0.05, min: 680, max: 890, xp: 680, tier: "Mythic" },
+  { name: "💎 Diamond Kraken", chance: 0.04, min: 700, max: 900, xp: 700, tier: "Mythic" },
+  { name: "🌌 Void Titan", chance: 0.04, min: 720, max: 920, xp: 720, tier: "Mythic" },
+  { name: "🌠 Celestial Serpent", chance: 0.03, min: 740, max: 940, xp: 740, tier: "Mythic" },
+  { name: "🪐 Galactic Leviathan", chance: 0.03, min: 760, max: 960, xp: 760, tier: "Mythic" },
+  { name: "🔥 Solar Dragon", chance: 0.02, min: 780, max: 980, xp: 780, tier: "Mythic" },
+  { name: "❄ Icebound Titan", chance: 0.02, min: 800, max: 1000, xp: 800, tier: "Mythic" },
+  { name: "⚡ Storm Dragon", chance: 0.015, min: 820, max: 1020, xp: 820, tier: "Mythic" },
+  { name: "💫 Astral Leviathan", chance: 0.015, min: 840, max: 1040, xp: 840, tier: "Mythic" },
+  { name: "🌌 Phantom Kraken", chance: 0.01, min: 860, max: 1060, xp: 860, tier: "Mythic" },
+  { name: "🌟 Starfire Serpent", chance: 0.01, min: 880, max: 1080, xp: 880, tier: "Mythic" },
+  { name: "🪐 Infinity Dragon", chance: 0.01, min: 900, max: 1100, xp: 900, tier: "Mythic" },
+  { name: "🔥 Pyro Leviathan", chance: 0.008, min: 920, max: 1120, xp: 920, tier: "Mythic" },
+  { name: "❄ Glacial Dragon", chance: 0.008, min: 940, max: 1140, xp: 940, tier: "Mythic" },
+  { name: "⚡ Tempest Titan", chance: 0.005, min: 960, max: 1160, xp: 960, tier: "Mythic" },
+  { name: "💎 Prism Kraken", chance: 0.005, min: 980, max: 1180, xp: 980, tier: "Mythic" },
+  { name: "🌌 Eternal Dragon", chance: 0.004, min: 1000, max: 1200, xp: 1000, tier: "Mythic" },
+  { name: "🌠 Cosmic Phoenix", chance: 0.004, min: 1020, max: 1220, xp: 1020, tier: "Mythic" },
+];
 
   const totalChance = fishes.reduce((sum, f) => sum + f.chance, 0);
   let roll = Math.random() * totalChance;
@@ -566,7 +679,78 @@ if (cmd === 'fish') {
 
   return msg.reply({ embeds: [embed] });
 }
- 
+
+  const sellableTiers = ["Common", "Rare", "Epic"];
+
+function getSellPrice(fish) {
+  
+  const minPrice = Math.floor(fish.min / 2);
+  const maxPrice = Math.floor(fish.max / 2);
+  return Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
+}
+
+
+if (cmd === 'sell') {
+  ensureUser(uid);
+
+  const fishName = args.join(" ").toLowerCase();
+  const userFish = db[uid].inventory || [];
+
+  const fishIndex = userFish.findIndex(f => f.name.toLowerCase() === fishName);
+  if (fishIndex === -1) return msg.reply("❌ Kamu tidak punya ikan ini di inventori.");
+
+  const fish = userFish[fishIndex];
+
+  if (!sellableTiers.includes(fish.tier))
+    return msg.reply(`❌ ${fish.name} (${fish.tier}) tidak bisa dijual!`);
+
+  const price = getSellPrice(fish);
+  db[uid].coin = (db[uid].coin || 0) + price;
+
+  userFish.splice(fishIndex, 1);
+  db[uid].inventory = userFish;
+
+  saveDB();
+
+  return msg.reply(`✅ Berhasil menjual **${fish.name}** (${fish.tier}) seharga **${koin(price)}**!`);
+}
+
+if (cmd === 'sellall') {
+  ensureUser(uid);
+
+  const userFish = db[uid].inventory || [];
+  if (!userFish.length) return msg.reply("❌ Inventori kamu kosong!");
+
+  
+  const tierFilter = args[0]?.toLowerCase();
+  const tiersToSell = tierFilter
+    ? sellableTiers.filter(t => t.toLowerCase() === tierFilter)
+    : sellableTiers;
+
+  let totalCoin = 0;
+  const soldFishList = [];
+  const remainingFish = [];
+
+  for (const fish of userFish) {
+    if (tiersToSell.includes(fish.tier)) {
+      const price = getSellPrice(fish);
+      totalCoin += price;
+      soldFishList.push(`💰 ${fish.name} (${fish.tier}) → ${koin(price)}`);
+    } else {
+      remainingFish.push(fish);
+    }
+  }
+
+  if (!soldFishList.length) return msg.reply("❌ Tidak ada ikan yang bisa dijual!");
+
+  db[uid].inventory = remainingFish;
+  db[uid].coin = (db[uid].coin || 0) + totalCoin;
+  saveDB();
+
+  const fishSoldText = soldFishList.join("\n");
+  return msg.reply(`✅ Semua ikan berhasil dijual!\n\n${fishSoldText}\n\n🏆 Total coin: ${koin(totalCoin)}`);
+}
+
   if (cmd === 'transfer') {
 
   if (!msg.guild)
@@ -878,6 +1062,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
