@@ -1039,8 +1039,54 @@ if (cmd === 'inv') {
   return msg.reply({ embeds: [embed] });
 };
 
+ if (cmd === 'addkoin') {
+  if (!msg.guild) 
+    return msg.reply('❌ Command ini hanya bisa digunakan di server.');
+
+  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator)) 
+    return msg.reply('❌ Hanya Admin yang bisa menggunakan command ini.');
+
+  const target = msg.mentions.users.first();
+  const amt = parseInt(args[1]);
+
+  if (!target || !Number.isInteger(amt) || amt <= 0) 
+    return msg.reply('Format: .addkoin @user 100');
+
+  ensureUser(target.id);
+
+  db[target.id].coins = (db[target.id].coins || 0) + amt;
+  saveDB();
+
+  const embed = new EmbedBuilder()
+    .setColor(0x2ecc71)
+    .setTitle("🛠 ADMIN ADD KOIN")
+    .addFields(
+      { name: "👤 Target", value: `<@${target.id}>`, inline: true },
+      { name: "💰 Ditambahkan", value: coin(amt), inline: true },
+      { name: "💎 Saldo Sekarang", value: coin(db[target.id].coins), inline: false }
+    )
+    .setFooter({ text: `Admin: ${msg.author.username}` })
+    .setTimestamp();
+
+  return msg.reply({ embeds: [embed] });
+}
+
+if (cmd === 'addstreak') {
+  if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator)) 
+    return msg.reply('❌ Admin only');
+
+  const target = msg.mentions.users.first();
+  const amt = parseInt(args[1]);
+
+  if (!target || isNaN(amt)) 
+    return msg.reply('Format: .addstreak @user 5');
+
+  ensureUser(target.id);
+
+  db[target.id].streak = (db[target.id].streak || 0) + amt;
+  saveDB();
+
+  return msg.reply(`🔥 Streak <@${target.id}> +${amt}`);
+}
 
 client.login(process.env.TOKEN);
-
-
-
