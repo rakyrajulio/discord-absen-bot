@@ -692,19 +692,16 @@ if (cmd === 'sellall') {
   ensureUser(uid);
 
   const userFish = db[uid].inventory || [];
-  const MIN_FISH = 1;
+  if (!userFish.length)
+    return msg.reply("❌ Kamu tidak punya ikan untuk dijual!");
 
-  if (userFish.length < MIN_FISH) 
-    return msg.reply(`❌ Kamu harus punya minimal ${MIN_FISH} ikan untuk menggunakan \`.sellall\``);
-
- 
   const tierArg = args[0]?.toLowerCase();
   const validTiers = ["Common","Rare","Epic","Legendary","Mythic"];
   let tiersToSell = [...validTiers];
 
   if (tierArg && tierArg !== "all") {
-    const formattedTier = tierArg.charAt(0).toUpperCase() + tierArg.slice(1);
-    if (!validTiers.includes(formattedTier)) 
+    const formattedTier = tierArg.charAt(0).toUpperCase() + tierArg.slice(1).toLowerCase();
+    if (!validTiers.includes(formattedTier))
       return msg.reply("❌ Tier tidak valid! Pilih: common, rare, epic, legendary, mythic, all");
     tiersToSell = [formattedTier];
   }
@@ -716,9 +713,9 @@ if (cmd === 'sellall') {
   for (const fish of userFish) {
     const fishTier = fish.tier.charAt(0).toUpperCase() + fish.tier.slice(1).toLowerCase();
     if (tiersToSell.includes(fishTier)) {
-      const price = Math.floor(fish.size / 2); 
+      const price = Math.floor(fish.size / 2);
       totalCoin += price;
-      soldFishList.push(`- ${fish.name} (${fishTier}) → ${koin(price)}`);
+      soldFishList.push(`- ${fish.name} (${fishTier}) → ${coin(price)}`);
     } else {
       remainingFish.push(fish);
     }
@@ -727,13 +724,13 @@ if (cmd === 'sellall') {
   if (!soldFishList.length) 
     return msg.reply("❌ Tidak ada ikan yang bisa dijual sesuai tier yang dipilih!");
 
- 
   db[uid].inventory = remainingFish;
   db[uid].coin = (db[uid].coin || 0) + totalCoin;
   saveDB();
 
-  return msg.reply(`✅ Semua ikan berhasil dijual!\n\n${soldFishList.join("\n")}\n\n🏆 Total coin diterima: ${koin(totalCoin)}`);
+  return msg.reply(`✅ Semua ikan berhasil dijual!\n\n${soldFishList.join("\n")}\n\n🏆 Total coin diterima: ${coin(totalCoin)}`);
 }
+
 
   if (cmd === 'transfer') {
 
@@ -1083,6 +1080,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
