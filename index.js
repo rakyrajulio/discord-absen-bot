@@ -697,14 +697,16 @@ if (cmd === 'sellall') {
   if (userFish.length < MIN_FISH) 
     return msg.reply(`❌ Kamu harus punya minimal ${MIN_FISH} ikan untuk menggunakan \`.sellall\``);
 
+ 
   const tierArg = args[0]?.toLowerCase();
-  let tiersToSell = ["Common","Rare","Epic","Legendary","Mythic"];
+  const validTiers = ["Common","Rare","Epic","Legendary","Mythic"];
+  let tiersToSell = [...validTiers];
 
-  if (tierArg) {
-    if (tierArg === "all") tiersToSell = ["Common","Rare","Epic","Legendary","Mythic"];
-    else if (["common","rare","epic","legendary","mythic"].includes(tierArg)) 
-      tiersToSell = [tierArg[0].toUpperCase() + tierArg.slice(1)];
-    else return msg.reply("❌ Tier tidak valid! Pilih: common, rare, epic, legendary, mythic, all");
+  if (tierArg && tierArg !== "all") {
+    const formattedTier = tierArg.charAt(0).toUpperCase() + tierArg.slice(1);
+    if (!validTiers.includes(formattedTier)) 
+      return msg.reply("❌ Tier tidak valid! Pilih: common, rare, epic, legendary, mythic, all");
+    tiersToSell = [formattedTier];
   }
 
   let totalCoin = 0;
@@ -712,9 +714,9 @@ if (cmd === 'sellall') {
   const remainingFish = [];
 
   for (const fish of userFish) {
-    const fishTier = fish.tier[0].toUpperCase() + fish.tier.slice(1).toLowerCase();
+    const fishTier = fish.tier.charAt(0).toUpperCase() + fish.tier.slice(1).toLowerCase();
     if (tiersToSell.includes(fishTier)) {
-      const price = Math.floor(fish.size / 2);
+      const price = Math.floor(fish.size / 2); 
       totalCoin += price;
       soldFishList.push(`- ${fish.name} (${fishTier}) → ${koin(price)}`);
     } else {
@@ -722,13 +724,15 @@ if (cmd === 'sellall') {
     }
   }
 
-  if (!soldFishList.length) return msg.reply("❌ Tidak ada ikan yang bisa dijual!");
+  if (!soldFishList.length) 
+    return msg.reply("❌ Tidak ada ikan yang bisa dijual sesuai tier yang dipilih!");
 
+ 
   db[uid].inventory = remainingFish;
-  db[uid].coin = (db[uid].coin || 0) + totalCoin; 
+  db[uid].coin = (db[uid].coin || 0) + totalCoin;
   saveDB();
 
-  return msg.reply(`✅ Semua ikan berhasil dijual!\n\n${soldFishList.join("\n")}\n\n🏆 Total coin: ${koin(totalCoin)}`);
+  return msg.reply(`✅ Semua ikan berhasil dijual!\n\n${soldFishList.join("\n")}\n\n🏆 Total coin diterima: ${koin(totalCoin)}`);
 }
 
   if (cmd === 'transfer') {
@@ -901,66 +905,60 @@ if (cmd === 'sellall') {
 
 if (cmd === 'top') {
   const page = parseInt(args[0]) || 1;
-  const perPage = 10;
+  const perPage = 10; 
 
- 
+  
   const sorted = Object.entries(db)
-    .filter(([uid, user]) => user && typeof user.coin === "number")
+    .filter(([id, data]) => data.coin && data.coin > 0)
     .sort((a, b) => b[1].coin - a[1].coin);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
-  if (page < 1 || page > totalPages)
-    return msg.reply(`❌ Halaman tidak valid. Total halaman: ${totalPages}`);
+  if (page < 1) page = 1;
+  if (page > totalPages) page = totalPages;
 
   const start = (page - 1) * perPage;
   const end = start + perPage;
-  const current = sorted.slice(start, end);
+  const topUsers = sorted.slice(start, end);
 
-  let desc = "";
-
-  for (let i = 0; i < current.length; i++) {
+  let description = '';
+  for (let i = 0; i < topUsers.length; i++) {
+    const [id, data] = topUsers[i];
     const rank = start + i + 1;
-    let medal = "";
-
-    if (rank === 1) medal = "🥇";
-    else if (rank === 2) medal = "🥈";
-    else if (rank === 3) medal = "🥉";
-
-    let username = "Unknown User";
-    try {
-      const user = await client.users.fetch(current[i][0]);
-      username = user.username;
-    } catch (e) {}
-
-    const coin = current[i][1].coin || 0;
-
-    desc += `${medal} **${rank}. ${username}** — 💰 ${koin(coin)}\n`;
+    description += `**#${rank}** <@${id}> — ${coin(data.coin)}\n`;
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0xffd700)
-    .setTitle("🏆 TOP KOIN SERVER")
-    .setDescription(desc || "Belum ada data.")
-    .setFooter({ text: `Halaman ${page} dari ${totalPages}` })
+    .setColor(0xffdd00)
+    .setTitle("🏆 TOP COIN SERVER")
+    .setDescription(description || 'Belum ada user dengan coin.')
+    .setFooter({ text: `Halaman ${page}/${totalPages} | Gunakan ".top <halaman>" untuk pindah halaman` })
     .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
 
-
 if (cmd === 'shop') {
-  
-  let desc = shopItems.map(i => {
-    if (i.type === "rod") return `🎣 **${i.name}** — ${koin(i.price)} | Bonus Rod: +${i.bonus}`;
-    if (i.type === "bait") return `🪱 **${i.name}** — ${koin(i.price)} | Chance Bonus: +${i.chanceBonus}%`;
-    return '';
+  ensureUser(uid);
+
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(shopItems.length / itemsPerPage);
+  let page = parseInt(args[0]) || 1;
+  if (page < 1) page = 1;
+  if (page > totalPages) page = totalPages;
+
+  const start = (page - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+
+  const desc = shopItems.slice(start, end).map(i => {
+    if (i.type === "rod") return `🎣 **${i.name}** — ${coin(i.price)} | Bonus Rod: +${i.bonus}`;
+    if (i.type === "bait") return `🪱 **${i.name}** — ${coin(i.price)} | Chance Bonus: +${i.chanceBonus}%`;
   }).join('\n');
 
   const embed = new EmbedBuilder()
     .setColor(0x00bfff)
     .setTitle("🛒 FISH SHOP")
-    .setDescription(desc || "Belum ada item di shop.")
-    .setFooter({ text: "Gunakan `.buy <nama item>` untuk membeli" })
+    .setDescription(desc)
+    .setFooter({ text: `Halaman ${page}/${totalPages} | Gunakan ".shop <halaman>" untuk pindah halaman` })
     .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
@@ -1085,6 +1083,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
