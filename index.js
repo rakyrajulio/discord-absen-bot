@@ -8,7 +8,7 @@ const fs = require('fs');
 require('dotenv').config();
 
 const PREFIX = '.';
-const WORK_COOLDOWN = 2 * 60 * 1000;
+const WORK_COOLDOWN = 1 * 60 * 1000;
 const XP_COOLDOWN = 60 * 1000;
 const FISH_COOLDOWN = 30 * 1000;
 const TAX_RATE = 0.05;
@@ -76,7 +76,7 @@ const shopItems = [
   { name: "Supreme+ Bait", type: "bait", price: 500000000, chanceBonus: 3584000 },
 ];
 
-const koin = n => `${n.toLocaleString('id-ID')} 🪙`;
+const coin = n => `${n.toLocaleString('id-ID')} 🪙`;
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const xpNeed = lvl => lvl * lvl * 100;
 
@@ -122,7 +122,7 @@ client.on('messageCreate', async msg => {
   function ensureUser(id) {
   if (!db[id]) {
     db[id] = {
-      coin: 100,
+      coin: 0,
       bank: 0,
       xp: 0,
       level: 1,
@@ -210,7 +210,7 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
 
     if (ch) {
       ch.send(
-        `🎉 **${msg.author.username} LEVEL UP!**\n⭐ Level ${db[uid].level}\n🪙 Bonus: ${koin(bonus)}`
+        `🎉 **${msg.author.username} LEVEL UP!**\n⭐ Level ${db[uid].level}\n🪙 Bonus: ${coin(bonus)}`
       );
     }
   }
@@ -241,7 +241,7 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
       },
       {
         name: "💰 Economy",
-        value: "• `.kerja` — Cari koin\n• `.transfer @user <jumlah>` — Kirim koin ke user lain",
+        value: "• `.kerja` — Cari coin\n• `.transfer @user <jumlah>` — Kirim coin ke user lain",
         inline: false
       },
       {
@@ -251,12 +251,12 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
       },
       {
         name: "👤 Profile & Rank",
-        value: "• `.profile` — Lihat profile lengkap\n• `.top` — Ranking koin server",
+        value: "• `.profile` — Lihat profile lengkap\n• `.top` — Ranking coin server",
         inline: false
       },
       {
         name: "⚙ Admin",
-        value: "• `.addkoin @user <jumlah>` — Tambah koin user\n• `.addstreak @user <jumlah>` — Tambah streak user",
+        value: "• `.addkoin @user <jumlah>` — Tambah coin user\n• `.addstreak @user <jumlah>` — Tambah streak user",
         inline: false
       }
     )
@@ -301,9 +301,9 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
     .setColor(0x00ff88)
     .setTitle("🗓 DAILY ABSEN")
     .addFields(
-      { name: "💰 Reward", value: koin(base), inline: true },
-      { name: "🔥 Streak Bonus", value: koin(streakBonus), inline: true },
-      { name: "💎 Total", value: koin(total), inline: true },
+      { name: "💰 Reward", value: coin(base), inline: true },
+      { name: "🔥 Streak Bonus", value: coin(streakBonus), inline: true },
+      { name: "💎 Total", value: coin(total), inline: true },
       { name: "🔥 Streak Sekarang", value: `${db[uid].streak} hari`, inline: false }
     )
     .setFooter({ text: "Login tiap hari untuk bonus lebih besar!" });
@@ -384,7 +384,7 @@ const job = jobs[Math.floor(Math.random() * jobs.length)];
     db[uid].coin += bonus;
 
     msg.channel.send(
-      `🎉 ${msg.author.username} naik ke Level ${db[uid].level}!\n🪙 Bonus: ${koin(bonus)}`
+      `🎉 ${msg.author.username} naik ke Level ${db[uid].level}!\n🪙 Bonus: ${coin(bonus)}`
     );
   }
 
@@ -395,10 +395,10 @@ const job = jobs[Math.floor(Math.random() * jobs.length)];
     .setTitle("🛠 HASIL KERJA")
     .addFields(
       { name: "💼 Pekerjaan", value: job.name, inline: false },
-      { name: "💵 Gaji Dasar", value: koin(base), inline: true },
-      { name: "⭐ Bonus Level", value: koin(levelBonus), inline: true },
-      { name: "🔥 Bonus Streak", value: koin(streakBonus), inline: true },
-      { name: "💎 Total", value: koin(total), inline: true },
+      { name: "💵 Gaji Dasar", value: coin(base), inline: true },
+      { name: "⭐ Bonus Level", value: coin(levelBonus), inline: true },
+      { name: "🔥 Bonus Streak", value: coin(streakBonus), inline: true },
+      { name: "💎 Total", value: coin(total), inline: true },
       { name: "⭐ XP Dapat", value: `+${xpGain}`, inline: true }
     )
     .setFooter({ text: "Kerja keras meningkatkan level!" });
@@ -441,8 +441,8 @@ const job = jobs[Math.floor(Math.random() * jobs.length)];
           .setDescription("Kamu berhasil menyelesaikan quest hari ini!")
           .addFields(
             { name: "📌 Quest", value: q.text, inline: false },
-            { name: "🎁 Reward", value: koin(q.reward), inline: true },
-            { name: "💎 Saldo Sekarang", value: koin(db[uid].coin), inline: true }
+            { name: "🎁 Reward", value: coin(q.reward), inline: true },
+            { name: "💎 Saldo Sekarang", value: coin(db[uid].coin), inline: true }
           )
           .setFooter({ text: "🔥 Kerja bagus! Besok ada quest baru!" })
           .setTimestamp()
@@ -462,7 +462,7 @@ const job = jobs[Math.floor(Math.random() * jobs.length)];
         .addFields(
           { name: "📌 Misi", value: q.text, inline: false },
           { name: "📊 Progress", value: `${bar}\n${q.progress}/${q.target}`, inline: false },
-          { name: "🎁 Reward", value: koin(q.reward), inline: true },
+          { name: "🎁 Reward", value: coin(q.reward), inline: true },
           { name: "📅 Status", value: statusText, inline: true }
         )
         .setFooter({ text: "Selesaikan sebelum reset harian!" })
@@ -658,7 +658,7 @@ if (cmd === 'fish') {
     db[uid].level++;
     const bonus = db[uid].level * 15;
     db[uid].coin += bonus;
-    msg.channel.send(`🎉 ${msg.author.username} naik ke Level ${db[uid].level}!\n🪙 Bonus: ${koin(bonus)}`);
+    msg.channel.send(`🎉 ${msg.author.username} naik ke Level ${db[uid].level}!\n🪙 Bonus: ${coin(bonus)}`);
   }
 
   saveDB();
@@ -674,7 +674,7 @@ if (cmd === 'fish') {
     .addFields(
       { name: "📏 Ukuran", value: `${size} cm`, inline: true },
       { name: "🏷 Tier", value: selected.tier, inline: true },
-      { name: "💰 Koin", value: koin(reward), inline: true },
+      { name: "💰 Koin", value: coin(reward), inline: true },
       { name: "⭐ XP", value: `+${xpGain}`, inline: true },
       { name: "📦 Total Ikan", value: `${db[uid].fish}`, inline: true }
     )
@@ -718,7 +718,7 @@ if (cmd === 'sellall') {
       
       const price = Math.floor(fish.size / 2);
       totalCoin += price;
-      soldFishList.push(`- ${fish.name} (${fish.tier}) → ${koin(price)}`);
+      soldFishList.push(`- ${fish.name} (${fish.tier}) → ${coin(price)}`);
     } else {
       remainingFish.push(fish);
     }
@@ -767,7 +767,7 @@ if (cmd === 'sellall') {
   }
 
   if (db[uid].coin < amt)
-    return msg.reply('❌ Koin kamu tidak cukup.');
+    return msg.reply('❌ coin kamu tidak cukup.');
 
   const taxRate = typeof TAX_RATE === "number" ? TAX_RATE : 0.05;
   const tax = Math.floor(amt * taxRate);
@@ -786,10 +786,10 @@ if (cmd === 'sellall') {
     .addFields(
       { name: "👤 Dari", value: `<@${uid}>`, inline: true },
       { name: "📥 Ke", value: `<@${target.id}>`, inline: true },
-      { name: "💰 Jumlah", value: koin(amt), inline: true },
-      { name: "💸 Pajak", value: koin(tax), inline: true },
-      { name: "✅ Diterima", value: koin(receive), inline: true },
-      { name: "💎 Sisa Saldo", value: koin(db[uid].coin), inline: false }
+      { name: "💰 Jumlah", value: coin(amt), inline: true },
+      { name: "💸 Pajak", value: coin(tax), inline: true },
+      { name: "✅ Diterima", value: coin(receive), inline: true },
+      { name: "💎 Sisa Saldo", value: coin(db[uid].coin), inline: false }
     )
     .setFooter({ text: `Pajak ${(taxRate * 100).toFixed(0)}% • Sistem Ekonomi RPG` })
     .setTimestamp();
@@ -863,9 +863,18 @@ if (cmd === 'sellall') {
 
   const needed = xpNeed(db[uid].level);
 
+  // Ambil data user, pakai default kalau null/undefined
   const rod = db[uid].rod || "Basic Rod";
   const bait = db[uid].bait || "Normal Bait";
-  const coins = db[uid].coins || 0;
+  const coins = db[uid].coin || 0;
+  const totalFish = db[uid].fish || 0;
+  const rareFish = db[uid].rareFish || 0;
+  const epicFish = db[uid].epicFish || 0;
+  const legendFish = db[uid].legendFish || 0;
+  const mythicFish = db[uid].mythicFish || 0;
+  const streak = db[uid].streak || 0;
+  const level = db[uid].level || 1;
+  const xp = db[uid].xp || 0;
 
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
@@ -875,23 +884,24 @@ if (cmd === 'sellall') {
     })
     .setThumbnail(msg.author.displayAvatarURL({ dynamic: true }))
     .addFields(
-      { name: '⭐ Level', value: `${db[uid].level}`, inline: true },
-      { name: '🪙 Coins', value: koin(coins), inline: true },
-      { name: '📊 XP', value: `${progressBar(db[uid].xp, needed)}\n${db[uid].xp}/${needed}`, inline: false },
-      { name: '🔥 Streak', value: `${db[uid].streak || 0} hari`, inline: true },
+      { name: '⭐ Level', value: `${level}`, inline: true },
+      { name: '🪙 Coins', value: coin(coins), inline: true },
+      { name: '📊 XP', value: `${progressBar(xp, needed)}\n${xp}/${needed}`, inline: false },
+      { name: '🔥 Streak', value: `${streak} hari`, inline: true },
       { name: '🎣 Rod', value: rod, inline: true },
       { name: '🪱 Bait', value: bait, inline: true },
-      { name: '🐟 Total Fish', value: `${db[uid].fish || 0}`, inline: true },
-      { name: '💎 Rare Fish', value: `${db[uid].rareFish || 0}`, inline: true },
-      { name: '✨ Epic Fish', value: `${db[uid].epicFish || 0}`, inline: true },
-      { name: '👑 Legendary Fish', value: `${db[uid].legendFish || 0}`, inline: true },
-      { name: '🌌 Mythic Fish', value: `${db[uid].mythicFish || 0}`, inline: true }
+      { name: '🐟 Total Fish', value: `${totalFish}`, inline: true },
+      { name: '💎 Rare Fish', value: `${rareFish}`, inline: true },
+      { name: '✨ Epic Fish', value: `${epicFish}`, inline: true },
+      { name: '👑 Legendary Fish', value: `${legendFish}`, inline: true },
+      { name: '🌌 Mythic Fish', value: `${mythicFish}`, inline: true }
     )
     .setFooter({ text: "🌊 Selamat memancing!" })
     .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
+
 
 
 
@@ -1071,6 +1081,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
