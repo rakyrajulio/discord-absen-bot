@@ -122,7 +122,7 @@ client.on('messageCreate', async msg => {
   function ensureUser(id) {
   if (!db[id]) {
     db[id] = {
-      coin: 0,
+      coin: 100,
       bank: 0,
       xp: 0,
       level: 1,
@@ -1071,6 +1071,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
