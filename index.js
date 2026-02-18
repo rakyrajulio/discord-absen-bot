@@ -83,37 +83,40 @@ client.on('messageCreate', async msg => {
   const now = Date.now();
 
   function ensureUser(id) {
-  if (!db[id]) {
-    db[id] = {
-      coin: 0,
-      bank: 0,
-      xp: 0,
-      level: 1,
-      lastXp: 0,
-      lastWork: 0,
-      lastFish: 0,
-      lastTransfer: 0,
-      lastAbsen: null,
-      streak: 0,
-      dailyQuest: null,
-      fish: 0,
-      rareFish: 0,
-      legendFish: 0,
-      biggestFish: 0,
-      totalWork: 0,
-      totalChat: 0,
-      totalTransfer: 0,
-      totalEarned: 0,
-      inventory: [],
-      rod: "Basic Rod"
-    };
+    if (!db[id]) {
+      db[id] = {
+        coin: 0,
+        bank: 0,
+        xp: 0,
+        level: 1,
+        lastXp: 0,
+        lastWork: 0,
+        lastFish: 0,
+        lastTransfer: 0,
+        lastAbsen: null,
+        streak: 0,
+        dailyQuest: null,
+        fish: 0,
+        rareFish: 0,
+        legendFish: 0,
+        biggestFish: 0,
+        totalWork: 0,
+        totalChat: 0,
+        totalTransfer: 0,
+        totalEarned: 0,
+        inventory: [],
+        rod: "Basic Rod"
+      };
 
-    saveDB();
+      saveDB();
+    }
   }
-}
 
+  // 🔥 PINDAHKAN KE SINI
+  ensureUser(uid);
 
   const today = todayStr();
+
   if (!db[uid].dailyQuest || db[uid].dailyQuest.date !== today) {
     const q = generateQuest();
     db[uid].dailyQuest = {
@@ -122,8 +125,8 @@ client.on('messageCreate', async msg => {
       claimed: false,
       date: today
     };
+    saveDB();
   }
-
   
 ensureUser(uid);
 
@@ -782,4 +785,5 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
