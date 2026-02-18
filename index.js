@@ -224,11 +224,11 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
   const cmd = args.shift().toLowerCase();
 
 
-  if (cmd === 'help') {
+ if (cmd === 'help') {
   const embed = new EmbedBuilder()
     .setColor(0x00bfff)
     .setAuthor({
-      name: `${msg.guild.name} • Economy RPG`,
+      name: `${msg.guild.name} • Economy BCM`,
       iconURL: msg.guild.iconURL({ dynamic: true })
     })
     .setTitle("🎮 Daftar Command • Prefix: `.`")
@@ -246,7 +246,7 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
       },
       {
         name: "🎣 Fishing",
-        value: "• `fish` — Mancing ikan\n• `topfish` — Ranking pemancing\n• `shop` — Beli Rod & Bait\n• `buy <item>` — Membeli item\n• `inv` / `inventory` — Lihat inventory\n• `sell <ikan>` — Menjual 1 ikan (Common / Rare / Epic)\n• `sellall [tier]` — Menjual semua ikan yang bisa dijual (opsional pilih tier: common/rare/epic)",
+        value: "• `fish` — Mancing ikan\n• `topfish` — Ranking pemancing\n• `shop` — Beli Rod & Bait\n• `buy <item>` — Membeli item\n• `inv` / `inventory` — Lihat inventory\n• `sellall [tier]` — Menjual semua ikan yang bisa dijual (opsional pilih tier: common/rare/epic/legendary/mythic/all)",
         inline: false
       },
       {
@@ -260,7 +260,7 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
         inline: false
       }
     )
-    .setFooter({ text: "⭐ Level Up • 🎣 Rare Fish • 🐉 Legendary Hunt • Gunakan `.sell` & `.sellall` untuk jual ikan!" })
+    .setFooter({ text: "⭐ Level Up • 🎣 Rare Fish • 🐉 Legendary Hunt • Gunakan `.sellall` untuk jual ikan!" })
     .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
@@ -681,43 +681,25 @@ function getSellPrice(fish) {
   return Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
 }
 
-if (cmd === 'sell') {
-  ensureUser(uid);
-
-  const fishName = args.join(" ").toLowerCase();
-  const userFish = db[uid].inventory || [];
-
-  const fishIndex = userFish.findIndex(f => f.name.toLowerCase() === fishName);
-  if (fishIndex === -1) return msg.reply("❌ Kamu tidak punya ikan ini di inventori.");
-
-  const fish = userFish[fishIndex];
-
-  if (!sellableTiers.map(t => t.toLowerCase()).includes(fish.tier.toLowerCase()))
-    return msg.reply(`❌ ${fish.name} (${fish.tier}) tidak bisa dijual!`);
-
-  const price = getSellPrice(fish);
-
-  db[uid].coins = (db[uid].coins || 0) + price;
-
-  
-  userFish.splice(fishIndex, 1);
-  db[uid].inventory = userFish;
-
-  saveDB();
-
-  return msg.reply(`✅ Berhasil menjual **${fish.name}** (${fish.tier}) seharga **${koin(price)}**!`);
-}
-
 if (cmd === 'sellall') {
   ensureUser(uid);
 
   const userFish = db[uid].inventory || [];
   if (!userFish.length) return msg.reply("❌ Inventori kamu kosong!");
 
-  const tierFilter = args[0]?.toLowerCase();
-  const tiersToSell = tierFilter
-    ? sellableTiers.filter(t => t.toLowerCase() === tierFilter)
-    : sellableTiers;
+  const tierArg = args[0]?.toLowerCase();
+
+
+  let tiersToSell = ["Common", "Rare", "Epic"];
+
+  if (tierArg) {
+    if (tierArg === "legendary") tiersToSell = ["Legendary"];
+    else if (tierArg === "mythic") tiersToSell = ["Mythic"];
+    else if (tierArg === "all") tiersToSell = ["Common","Rare","Epic","Legendary","Mythic"];
+    else if (sellableTiers.map(t => t.toLowerCase()).includes(tierArg)) 
+      tiersToSell = sellableTiers.filter(t => t.toLowerCase() === tierArg);
+    else return msg.reply("❌ Tier tidak valid! Pilih: common, rare, epic, legendary, mythic, all");
+  }
 
   let totalCoin = 0;
   const soldFishList = [];
@@ -725,7 +707,6 @@ if (cmd === 'sellall') {
 
   for (const fish of userFish) {
     if (tiersToSell.map(t => t.toLowerCase()).includes(fish.tier.toLowerCase())) {
-     
       const price = getSellPrice(fish);
       totalCoin += price;
       soldFishList.push(`- ${fish.name} (${fish.tier}) → ${koin(price)}`);
@@ -743,7 +724,6 @@ if (cmd === 'sellall') {
   const fishSoldText = soldFishList.join("\n");
   return msg.reply(`✅ Semua ikan berhasil dijual!\n\n${fishSoldText}\n\n🏆 Total coin: ${koin(totalCoin)}`);
 }
-
 
   if (cmd === 'transfer') {
 
@@ -1084,6 +1064,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
