@@ -246,7 +246,7 @@ if (now - db[uid].lastXp > XP_COOLDOWN) {
       },
       {
         name: "🎣 Fishing",
-        value: "• `fish` — Mancing ikan\n• `topfish` — Ranking pemancing\n• `shop` — Beli Rod & Bait\n• `buy <item>` — Membeli item\n• `inv` / `inventory` — Lihat inventory\n• `sellall [tier]` — Menjual semua ikan yang bisa dijual (opsional pilih tier: common/rare/epic/legendary/mythic/all)",
+        value: "• `fish` — Mancing ikan\n• `topfish` — Ranking pemancing\n• `shop` — Beli Rod & Bait\n• `buy <item>` — Membeli item\n• `inv` — Lihat inventory\n• `sellall [tier]` — Menjual semua ikan yang bisa dijual (opsional pilih tier: common/rare/epic/legendary/mythic/all)",
         inline: false
       },
       {
@@ -675,21 +675,27 @@ if (cmd === 'fish') {
   const sellableTiers = ["Common", "Rare", "Epic"];
 
 function getSellPrice(fish) {
+  /
+  const min = Math.max(0, Math.floor(fish.min || 0));
+  const max = Math.max(min, Math.floor(fish.max || min)); 
+
   
-  const minPrice = Math.floor(fish.min / 2);
-  const maxPrice = Math.floor(fish.max / 2);
-  return Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
 
 if (cmd === 'sellall') {
   ensureUser(uid);
 
   const userFish = db[uid].inventory || [];
-  if (!userFish.length) return msg.reply("❌ Inventori kamu kosong!");
+  const MIN_FISH = 1; 
+
+  if (userFish.length < MIN_FISH) 
+    return msg.reply(`❌ Kamu harus punya minimal ${MIN_FISH} ikan untuk menggunakan \`.sellall\``);
 
   const tierArg = args[0]?.toLowerCase();
 
-
+ 
   let tiersToSell = ["Common", "Rare", "Epic"];
 
   if (tierArg) {
@@ -973,20 +979,20 @@ if (cmd === 'buy') {
   return msg.reply(`✅ Berhasil membeli **${item.name}**!\n💰 Sisa koin: ${koin(db[uid].coin)}`);
 }
 
-if (cmd === 'inv' || cmd === 'inventory') {
+if (cmd === 'inv') {
   ensureUser(uid);
 
-  
   const rod = db[uid].rod || "Basic Rod";
   const bait = db[uid].bait || "Normal Bait";
-
-  const fish = db[uid].fish || 0;
-  const rareFish = db[uid].rareFish || 0;
-  const epicFish = db[uid].epicFish || 0;
-  const mythicFish = db[uid].mythicFish || 0;
-  const legendFish = db[uid].legendFish || 0;
-
   const coins = db[uid].coins || 0;
+
+  const inventory = db[uid].inventory || [];
+
+  const countByTier = inventory.reduce((acc, fish) => {
+    const tier = fish.tier || "Common";
+    acc[tier] = (acc[tier] || 0) + 1;
+    return acc;
+  }, {});
 
   const embed = new EmbedBuilder()
     .setColor(0x00ff88)
@@ -995,17 +1001,18 @@ if (cmd === 'inv' || cmd === 'inventory') {
       { name: "🎣 Rod", value: rod, inline: true },
       { name: "🪱 Bait", value: bait, inline: true },
       { name: "💰 Coins", value: `${coins}`, inline: true },
-      { name: "🐟 Ikan Biasa", value: `${fish}`, inline: true },
-      { name: "💎 Rare Fish", value: `${rareFish}`, inline: true },
-      { name: "✨ Epic Fish", value: `${epicFish}`, inline: true },
-      { name: "🔱 Mythic Fish", value: `${mythicFish}`, inline: true },
-      { name: "🐉 Legendary Fish", value: `${legendFish}`, inline: true }
+      { name: "🐟 Common Fish", value: `${countByTier["Common"] || 0}`, inline: true },
+      { name: "💎 Rare Fish", value: `${countByTier["Rare"] || 0}`, inline: true },
+      { name: "✨ Epic Fish", value: `${countByTier["Epic"] || 0}`, inline: true },
+      { name: "🔱 Mythic Fish", value: `${countByTier["Mythic"] || 0}`, inline: true },
+      { name: "🐉 Legendary Fish", value: `${countByTier["Legendary"] || 0}`, inline: true }
     )
-    .setFooter({ text: "Tingkatkan rod & bait untuk hasil mancing lebih besar!" })
+    .setFooter({ text: "Gunakan `.sellall [tier]` untuk menjual ikan!" })
     .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
+
 
 if (cmd === 'addkoin') {
 
@@ -1064,6 +1071,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
