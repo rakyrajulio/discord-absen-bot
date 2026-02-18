@@ -689,14 +689,17 @@ if (cmd === 'fish') {
 }
 
 if (cmd === 'sellall') {
+  
   ensureUser(uid);
 
-  const userFish = db[uid].inventory || [];
-  if (!userFish.length)
+  const userData = db[uid];
+  const userFish = userData.inventory || [];
+
+  if (!userFish.length) 
     return msg.reply("❌ Kamu tidak punya ikan untuk dijual!");
 
   const tierArg = args[0]?.toLowerCase();
-  const validTiers = ["Common","Rare","Epic","Legendary","Mythic"];
+  const validTiers = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
   let tiersToSell = [...validTiers];
 
   if (tierArg && tierArg !== "all") {
@@ -713,6 +716,7 @@ if (cmd === 'sellall') {
   for (const fish of userFish) {
     const fishTier = fish.tier.charAt(0).toUpperCase() + fish.tier.slice(1).toLowerCase();
     if (tiersToSell.includes(fishTier)) {
+      
       const price = Math.floor(fish.size / 2);
       totalCoin += price;
       soldFishList.push(`- ${fish.name} (${fishTier}) → ${coin(price)}`);
@@ -724,12 +728,15 @@ if (cmd === 'sellall') {
   if (!soldFishList.length) 
     return msg.reply("❌ Tidak ada ikan yang bisa dijual sesuai tier yang dipilih!");
 
-  db[uid].inventory = remainingFish;
-  db[uid].coin = (db[uid].coin || 0) + totalCoin;
+  
+  userData.inventory = remainingFish;
+  userData.coin = (userData.coin || 0) + totalCoin;
+
   saveDB();
 
   return msg.reply(`✅ Semua ikan berhasil dijual!\n\n${soldFishList.join("\n")}\n\n🏆 Total coin diterima: ${coin(totalCoin)}`);
 }
+
 
 
   if (cmd === 'transfer') {
@@ -856,23 +863,25 @@ if (cmd === 'sellall') {
 }
 
 
-  if (cmd === 'profile') {
+if (cmd === 'profile') {
+ 
   ensureUser(uid);
 
-  const needed = xpNeed(db[uid].level);
+  const userData = db[uid];
 
- 
-  const rod = db[uid].rod || "Basic Rod";
-  const bait = db[uid].bait || "Normal Bait";
-  const coins = db[uid].coin || 0;
-  const totalFish = db[uid].fish || 0;
-  const rareFish = db[uid].rareFish || 0;
-  const epicFish = db[uid].epicFish || 0;
-  const legendFish = db[uid].legendFish || 0;
-  const mythicFish = db[uid].mythicFish || 0;
-  const streak = db[uid].streak || 0;
-  const level = db[uid].level || 1;
-  const xp = db[uid].xp || 0;
+  const needed = xpNeed(userData.level);
+
+  const rod = userData.rod;
+  const bait = userData.bait;
+  const coins = userData.coin;
+  const totalFish = userData.fish;
+  const rareFish = userData.rareFish;
+  const epicFish = userData.epicFish;
+  const legendFish = userData.legendFish;
+  const mythicFish = userData.mythicFish;
+  const streak = userData.streak;
+  const level = userData.level;
+  const xp = userData.xp;
 
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
@@ -991,26 +1000,32 @@ if (cmd === 'buy') {
 if (cmd === 'inv') {
   ensureUser(uid);
 
-  const rod = db[uid].rod || "Basic Rod";
-  const bait = db[uid].bait || "Normal Bait";
-  const coins = db[uid].coins || 0;
-  const userFish = db[uid].inventory || [];
+  const userData = db[uid];
+  const rod = userData.rod || "Basic Rod";
+  const bait = userData.bait || "Normal Bait";
+  const coins = userData.coin || 0; 
+  const userFish = userData.inventory || [];
 
  
   const counts = { Common: 0, Rare: 0, Epic: 0, Legendary: 0, Mythic: 0 };
   for (const fish of userFish) {
-    if (fish.tier && counts[fish.tier] !== undefined) {
-      counts[fish.tier]++;
+    if (fish.tier) {
+      const fishTier = fish.tier.charAt(0).toUpperCase() + fish.tier.slice(1).toLowerCase();
+      if (counts[fishTier] !== undefined) counts[fishTier]++;
     }
   }
 
   const embed = new EmbedBuilder()
     .setColor(0x00ff88)
-    .setTitle(`${msg.author.username} • Inventory`)
+    .setAuthor({ 
+      name: `${msg.author.username} • Inventory`, 
+      iconURL: msg.author.displayAvatarURL({ dynamic: true })
+    })
+    .setThumbnail(msg.author.displayAvatarURL({ dynamic: true }))
     .addFields(
       { name: "🎣 Rod", value: rod, inline: true },
       { name: "🪱 Bait", value: bait, inline: true },
-      { name: "💰 Coins", value: `${coins}`, inline: true },
+      { name: "💰 Coins", value: coin(coins), inline: true },
       { name: "🐟 Common Fish", value: `${counts.Common}`, inline: true },
       { name: "💎 Rare Fish", value: `${counts.Rare}`, inline: true },
       { name: "✨ Epic Fish", value: `${counts.Epic}`, inline: true },
@@ -1080,6 +1095,7 @@ if (cmd === 'addstreak') {
 
 
 client.login(process.env.TOKEN);
+
 
 
 
