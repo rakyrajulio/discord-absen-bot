@@ -10,7 +10,7 @@ require('dotenv').config();
 const PREFIX = '.';
 const WORK_COOLDOWN = 1 * 60 * 1000;
 const XP_COOLDOWN = 60 * 1000;
-const FISH_COOLDOWN = 5 * 1000;
+const FISH_COOLDOWN = 0;
 const TAX_RATE = 0.05;
 const TRANSFER_COOLDOWN = 10 * 1000; 
 
@@ -628,22 +628,31 @@ if (cmd === 'fish') {
   { name: "🌠 Cosmic Phoenix", chance: 0.004, min: 1020, max: 1220, xp: 1020, tier: "Mythic" },
 ];
 
-  const whitelistTiers = ["Common", "Rare"];
+ const whitelistTiers = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
   const whitelistFishes = fishes.filter(f => whitelistTiers.includes(f.tier));
 
  
-  const totalChance = whitelistFishes.reduce((sum, f) => sum + f.chance, 0);
-  let roll = Math.random() * totalChance;
-  let cumulative = 0;
-  let selected = whitelistFishes[0];
+  const tierRates = {
+  Common: 50,
+  Rare: 25,
+  Epic: 15,
+  Legendary: 7,
+  Mythic: 3
+};
 
-  for (let fish of whitelistFishes) {
-    cumulative += fish.chance;
-    if (roll <= cumulative) {
-      selected = fish;
-      break;
-    }
+function rollTier() {
+  const total = Object.values(tierRates).reduce((a, b) => a + b, 0);
+  let random = Math.random() * total;
+
+  for (const tier in tierRates) {
+    random -= tierRates[tier];
+    if (random <= 0) return tier;
   }
+}
+
+const rolledTier = rollTier();
+const pool = fishes.filter(f => f.tier === rolledTier);
+const selected = pool[Math.floor(Math.random() * pool.length)];
 
   const size = Math.floor(Math.random() * (selected.max - selected.min + 1)) + selected.min;
   const reward = Math.floor(size / 2);
@@ -694,6 +703,8 @@ if (cmd === 'fish') {
   let color = 0x2ecc71; 
   if (selected.tier === "Rare") color = 0x3498db;
   if (selected.tier === "Legendary") color = 0xf1c40f;
+  if (selected.tier === "Epic") color = 0x9b59b6;
+if (selected.tier === "Mythic") color = 0xe74c3c;
 
   const embed = new EmbedBuilder()
     .setColor(color)
@@ -1049,6 +1060,7 @@ if (cmd === 'inv') {
   }); 
 
 client.login(process.env.TOKEN);
+
 
 
 
